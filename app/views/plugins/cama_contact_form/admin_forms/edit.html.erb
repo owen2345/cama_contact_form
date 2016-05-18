@@ -1,0 +1,183 @@
+<%= javascript_include_tag plugin_asset('admin_editor') %>
+<% @form = current_site.contact_forms.new if @form.nil? %>
+<div class="page-title">
+  <h2><span class="fa fa-folder"></span>  <%= t('plugin.contact_form.contact_form') %> - <%= @form.name %></h2>
+</div>
+<%= form_for @form, url:{action: @form.new_record? ? :create : :update} , role: 'form', html: { id: "contact_form_editor", class: "validate page-content-wrap row" } do |f| %>
+    <div class="col-md-12">
+        <div class="col-md-6">
+            <br>
+            <label><%= t('.shortcode_msg', default: 'Copy Shortcode')%>: </label>
+            <%= raw cama_shortcode_print(cama_form_shortcode(@form.slug)) %>
+        </div>
+        <div class="col-md-6 text-right">
+            <a class="btn btn-default" href="<%= url_for action: :index %>"><%= t('.back_btn', default: 'Back to List') %></a>
+            <button class="btn btn-primary" type="submit"><%= t('.submit_btn', default: 'Save Changes') %></button>
+        </div>
+    </div>
+    <div class="clearfix"></div>
+    <div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><%= t('.form_details', default: 'Formulario de Contacto') %></h3>
+                <ul class="panel-controls">
+                    <li><a href="#" class="panel-collapse"><span class="fa fa-angle-down"></span></a></li>
+                </ul>
+            </div>
+            <div class="panel-body">
+                <div class="">
+                    <div class="form-group">
+                        <%= f.label nil, "#{t('.name', default: 'Título')} <abbr title='required'>*</abbr>".html_safe, :class => ""  %><br>
+                        <%= f.text_field :name, :class => "form-control required", style: "" %>
+                    </div>
+
+                    <div class="form-group">
+                        <%= f.label nil, "#{t('.slug', default: 'Código')} <abbr title=\"required\">*</abbr>".html_safe, :class => ""  %>
+                        <%= f.text_field :slug, :class => "form-control slug required", "data-parent" => "plugins_contact_form_models_contact_form_name", style: "" %>
+                    </div>
+                    <div>
+                        <a class="btn btn-default btn-xs html_btn"><%= t('.html_code') %> <i class='fa fa-cog'></i></a>
+                        <div class="hidden">
+                            <hr>
+                            <div class="form-group">
+                                <%= label_tag nil, t('.before_code', default: 'Code HTML before Form') %>
+                                <%= text_area_tag 'railscf_mail[previous_html]', (@form.the_settings[:railscf_mail][:previous_html] rescue ''), class: 'form-control' %>
+                            </div>
+                            <div class="form-group">
+                                <%= label_tag nil, t('.after_code', default: 'Code HTML after Form') %>
+                                <%= text_area_tag 'railscf_mail[after_html]', (@form.the_settings[:railscf_mail][:after_html] rescue ''), class: 'form-control' %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><%= t('.form_notification_email_settings', default: 'Notification Email Settings') %></h3>
+                <ul class="panel-controls">
+                    <li><a href="#" class="panel-collapse"><span class="fa fa-angle-down"></span></a></li>
+                </ul>
+            </div>
+            <div class="panel-body">
+                <div class="">
+                    <div class="form-group">
+                        <label for="railscf_mail_to"><%= t('.to', default: 'Email') %> <abbr title="required">*</abbr>:</label><br>
+                        <input id="railscf_mail_to" class="form-control required" type="text" name="railscf_mail[to]" value="<%= @form.the_settings[:railscf_mail][:to] rescue '' %>" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="railscf_mail_subject"><%= t('.subject', default: 'Subject') %> <abbr title="required">*</abbr>:</label><br>
+                        <input id="railscf_mail_subject" class="form-control translatable required" type="text" name="railscf_mail[subject]" value="<%= @form.the_settings[:railscf_mail][:subject] rescue '' %>" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="railscf_mail_body"><%= t('.body', default: 'Email message to prepend') %>:</label><br>
+                        <textarea rows="4" cols="5" id="railscf_mail_body" class="form-control translatable" name="railscf_mail[body]"><%= @form.the_settings[:railscf_mail][:body] rescue t('plugin.contact_form.body_value') %></textarea>
+                    </div>
+                    <div class="form-group hidden">
+                        <label><%= t('.name_button') %>:</label>
+                        <input class="form-control" type="text" name="railscf_form_button[name_button]" value="<%= @form.the_settings[:railscf_form_button][:name_button] rescue 'Send' %>">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><%= t('.confirmation_email_settings', default: 'Confirmation Email Settings') %></h3>
+                <ul class="panel-controls">
+                    <li><a href="#" class="panel-collapse"><span class="fa fa-angle-down"></span></a></li>
+                </ul>
+            </div>
+            <div class="panel-body">
+                <p><small><i><%= t('.confirmation_email_descr', default: 'You can use the code of fields to represent the value of this fields. Sample: Hello [c1]') %></i></small></p>
+                <div class="">
+                    <div class="form-group">
+                        <label><%= t('.to', default: 'Send Confirmation To') %>:</label><br>
+                        <input class="form-control" type="text" name="railscf_mail[to_answer]" value="<%= @form.the_settings[:railscf_mail][:to_answer] rescue '' %>" placeholder="[c1]" />
+                    </div>
+
+                    <div class="form-group">
+                        <label><%= t('.subject', default: 'Subject') %>:</label><br>
+                        <input class="form-control translatable required" type="text" name="railscf_mail[subject_answer]" value="<%= @form.the_settings[:railscf_mail][:subject_answer] rescue '' %>" />
+                    </div>
+
+                    <div class="form-group">
+                        <label><%= t('.body_answer', default: 'Email message') %>:</label><br>
+                        <textarea placeholder="Hi [c2], thanks for contact us" rows="4" cols="5" class="form-control translatable" name="railscf_mail[body_answer]"><%= @form.the_settings[:railscf_mail][:body_answer] rescue '' %></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default panel-toggled">
+            <div class="panel-heading">
+                <h3 class="panel-title"><%= t('.form_settings_messages', default: 'Message Settings') %></h3>
+                <ul class="panel-controls">
+                    <li><a href="#" class="panel-collapse"><span class="fa fa-angle-up"></span></a></li>
+                </ul>
+            </div>
+            <div class="panel-body">
+                <div class="">
+                    <div class="form-group">
+                        <p class="description"><label for="railscf_message_mail-sent-ok"><%= t('.success_form_msg', default: 'Success Message') %></label></p>
+                        <input type="text" class="form-control translatable" name="railscf_message[mail_sent_ok]" id="railscf_message_mail_sent_ok" value="<%= @form.the_settings[:railscf_message][:mail_sent_ok] rescue '' %>" />
+                    </div>
+                    <div class="form-group">
+                        <p class="description"><label for="railscf_message_mail-sent-ng"><%= t('.error_form_msg', default: 'Error Message') %></label></p>
+                        <input type="text" class="form-control translatable" name="railscf_message[mail_sent_ng]" id="railscf_message_mail_sent_ng" value="<%= @form.the_settings[:railscf_message][:mail_sent_ng] rescue '' %>" />
+                    </div>
+                    <!--<div class="form-group">-->
+                        <!--<p class="description"><label for="railscf_message_validation-error"><%#= t('.error_validation_msg', default: 'Error validation message') %></label></p>-->
+                        <!--<input type="text" class="form-control translatable" name="railscf_message[validation_error]" id="railscf_message_validation_error" value="<%#= @form.the_settings[:railscf_message][:validation_error] rescue '' %>"/>-->
+                    <!--</div>-->
+                    <div class="form-group">
+                        <p class="description"><label for="railscf_message_invalid-required"><%= t('.error_required_msg', default: 'Error required message') %></label></p>
+                        <input type="text" class="form-control translatable" name="railscf_message[invalid_required]" id="railscf_message_invalid_required" value="<%= @form.the_settings[:railscf_message][:invalid_required] rescue '' %>" />
+                    </div>
+                    <div class="form-group">
+                        <p class="description"><label for="railscf_message_invalid-email"><%= t('.email_invalid_msg', default: 'Invalid email message') %></label></p>
+                        <input type="text" class="form-control translatable" name="railscf_message[invalid_email]" id="railscf_message_invalid_email" value="<%= @form.the_settings[:railscf_message][:invalid_email] rescue '' %>"/>
+                    </div>
+                    <div class="form-group">
+                        <p class="description"><label for="railscf_message_captcha-not-match"><%= t('.captch_error_msg', default: 'Invalid captcha message') %></label></p>
+                        <input type="text" class="form-control translatable" name="railscf_message[captcha_not_match]" id="railscf_message_captcha_not_match" value="<%= @form.the_settings[:railscf_message][:captcha_not_match] rescue '' %>"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><%= t('.my_fields', default: 'Fields') %></h3>
+            </div>
+            <ul class="panel-body" id="my_fields" data-cid="<%= @form.fields.map{|field| field[:cid].scan(/\d/).join('').to_i }.max || 1 %>">
+                <% @form.fields.each do |field| %>
+                    <%= render 'item_field', field: field %>
+                <% end %>
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><%= t('.all_fields', default: 'Available Fields') %></h3>
+            </div>
+            <div class="panel-body" id="fields_available" data-remote_url="<%= item_field_admin_plugins_cama_contact_form_admin_forms_url %>">
+                <a class="btn btn-default" data-field-type="text" ><span class="fa fa-font"></span> <%= t('.fields.text', default: 'Text Box') %></a>
+                <a class="btn btn-default" data-field-type="paragraph" > <span class="symbol">¶</span> <%= t('.fields.paragraph', default: 'TextArea') %> </a>
+                <a class="btn btn-default" data-field-type="checkboxes" > <span class="symbol"><span class="fa fa-square-o"></span></span> <%= t('.fields.checkboxes', default: 'Checkboxes') %> </a>
+                <a class="btn btn-default" data-field-type="radio" ><span class="fa fa-circle-o"></span> <%= t('.fields.radio', default: 'Radio Button') %></a>
+                <a class="btn btn-default" data-field-type="dropdown" ><span class="fa fa-caret-down"></span> <%= t('.fields.dropdown', default: 'Select') %></a>
+                <a class="btn btn-default" data-field-type="website" ><span class="fa fa-link"></span> <%= t('.fields.website', default: 'Website') %></a>
+                <a class="btn btn-default" data-field-type="email" ><span class="fa fa-envelope-o"></span> <%= t('.fields.email', default: 'Email') %></a>
+                <a class="btn btn-default" data-field-type="captcha" ><span class="symbol"><span class="glyphicon glyphicon-barcode"></span></span> <%= t('.fields.captcha', default: 'Captcha') %> </a>
+                <a class="btn btn-default" data-field-type="file" ><span class="fa fa-cloud-upload"></span> <%= t('.fields.captcha', default: 'Upload File') %></a>
+                <a class="btn btn-default" data-field-type="submit" ><span class="fa fa-button"></span> <%= t('.fields.submit', default: 'Submit Button') %></a>
+            </div>
+        </div>
+    </div>
+<% end %>

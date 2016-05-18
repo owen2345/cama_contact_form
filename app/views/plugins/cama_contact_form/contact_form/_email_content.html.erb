@@ -1,0 +1,19 @@
+<div>
+    <%= raw message_body %>
+</div>
+<div class="data_body">
+  <table style="width: 100%; float: left;">
+    <tbody>
+      <tr>
+        <td style="width: 50%; float: left">
+          <% fields.each do |key, value| %>
+            <div class="data_field">
+              <strong><%= key %>:</strong>
+              <%= value[0] %>
+            </div>
+          <% end %>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

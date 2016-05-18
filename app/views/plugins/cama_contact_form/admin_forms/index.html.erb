@@ -1,0 +1,64 @@
+<div class="page-title">
+    <h2><span class="fa fa-archive"></span> <%= t('.title', default: 'Contact Form') %></h2>
+</div>
+<div class="page-content-wrap">
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading ui-draggable-handle">
+                    <h3 class="panel-title"><%= t('.title_form', default: 'New Contact Form') %></h3>
+                </div>
+                <%= render partial: 'form' %>
+            </div>
+        </div>
+        <div class="col-md-8">
+
+            <!-- START BASIC TABLE SAMPLE -->
+            <div class="panel panel-default">
+                <div class="panel-heading ui-draggable-handle">
+                    <h3 class="panel-title"><%= t('.list_forms', default: 'Forms List') %></h3>
+                </div>
+                <div class="panel-body">
+
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th><%= t('.name', default: 'Name') %></th>
+                            <th><%= t('.form.description', default: 'Description') %></th>
+                            <th><%= t('.slug', default: 'Slug') %></th>
+                            <th><%= t('.shortcode', default: 'Shortcode') %></th>
+                            <th><%= t('.count', default: 'Items') %></th>
+                            <th><%= t('.actions', default: 'Actions') %></th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        <% @forms.each do |item| %>
+                            <tr>
+                                <td> <%= item.name %> </td>
+                                <td><%= item.description %></td>
+                                <td><%= item.slug %></td>
+                                <td><%= cama_form_shortcode(item.slug)%></td>
+                                <td><%= item.responses.count %></td>
+                                <td>
+                                    <%= link_to raw("<i class='fa fa-list-alt'></i> "), url_for(action: :responses, admin_form_id: item.id), class: "btn btn-info btn-xs cama_ajax_request", title: "#{t('.list_responses', default: 'Form Items')}" %>
+                                    <%= link_to raw('<i class="fa fa-pencil"></i>'), {action: :edit, id: item.id }, class: "btn btn-default btn-xs cama_ajax_request", title: "#{t('.edit', default: 'Edit Form')}" %>
+                                    <%= link_to raw('<i class="fa fa-times"></i>'), { action: :destroy, id: item.id },method: :delete, data: { confirm: "#{t('.msg_confirm', default: 'Are you sure to delete this form?')}" }, class: "btn btn-danger btn-xs", title: "#{ t('.delete', default: 'Delete Form')}"  %>
+
+                                </td>
+                            </tr>
+                        <% end %>
+
+                        </tbody>
+                    </table>
+                    <%= content_tag("div", raw(t('plugin.contact_form.msg_data_found_list', default: 'No records found')), class: "alert alert-warning") if @forms.empty? %>
+                    <%= raw cama_do_pagination(@forms) %>
+                </div>
+            </div>
+            <!-- END BASIC TABLE SAMPLE -->
+        </div>
+    </div>
+
+    <!-- END PAGE CONTENT WRAPPER -->
+</div>

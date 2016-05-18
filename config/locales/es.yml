@@ -1,0 +1,98 @@
+es:
+  plugins:
+    cama_contact_form:
+      title: 'Formulario de Contacto'
+      list_responses: 'Lista de Registros'
+      edit_view: 'Edición de Formulario'
+      admin_forms:
+        index:
+          title: 'Formulario de Contacto'
+          list_forms: 'Lista de Formularios de Contacto'
+          title_form: 'Nuevo Formulario'
+          name: 'Nombre'
+          slug: 'Código'
+          description: 'Descripción'
+          shortcode: 'Código Abreviado'
+          count: 'Registros'
+          actions: 'Acciones'
+          list_responses: 'Lista de Registros'
+          edit: 'Editar Formulario'
+          delete: 'Eliminar Formulario'
+          msg_confirm: 'Esta seguro de eliminar este formulario y todos sus registros?'
+
+        edit:
+          shortcode_msg: 'Copia el código abreviado'
+          submit_btn: 'Guardar Cambios'
+          back_btn: 'Volver al Listado'
+          html_code: 'Código HTML'
+          before_code: 'Código HTML antes del formulario'
+          after_code: 'Código HTML despues del formulario'
+          form_notification_email_settings: 'Configuración de notificación'
+          to: 'Correo a'
+          subject: 'Asunto'
+          body: 'Mensaje a agregar'
+          confirmation_email_settings: 'Configuración de confirmación'
+          confirmation_email_descr: 'Puedes usar los códigos de cada campo para representar los valores de estos. Ejemplo: Hola [c1]'
+          body_answer: 'Mensaje de confirmación'
+
+          form_settings_messages: 'Configuración de mensajes'
+          success_form_msg: 'Mensaje satisfactorio'
+          error_form_msg: 'Mensaje de error'
+          error_required_msg: 'Mensaje de error de campos requeridos'
+          email_invalid_msg: 'Mensaje de error de campos tipo correo'
+          captch_error_msg: 'Mensja de error de campos tipo código de seguridad'
+
+          my_fields: 'Campos del Formulario'
+          all_fields: 'Campos Disponibles'
+
+          fields:
+            submit: 'Boton de Enviar'
+            captcha: 'Código de Seguridad'
+            checkboxes: 'Casillas'
+            radio: 'botón de opción'
+            dropdown: 'Selección'
+            website: 'Sitio web'
+            email: 'Correo Electrónico'
+            text: 'Area de Texto'
+            paragraph: 'Campo de Texto'
+            file: 'Subir Archivo'
+        item_field:
+          label: 'Etiqueta'
+          descr: 'Descripción'
+          is_required: 'Es requerido?'
+          options: 'Opciones'
+          here_label: 'Aquí tu etiqueta'
+          default: 'Por defecto'
+          add_option: 'Agregar opción'
+          html_code: 'Código HTML'
+          custom_class: 'Estilo Personalizado'
+          template: 'Plantilla'
+          attributes: 'Attributos del campo'
+
+
+        form:
+          name: 'Nombre'
+          slug: 'Código'
+          description: 'Descripción'
+          back_btn: 'Atras'
+          submit_btn: 'Crear'
+
+        responses:
+          back_btn: 'Volver al listado'
+          created_at: 'Fecha de Registro'
+          list_responses: 'Lista de Registros'
+
+        create:
+          created: 'Formulario creado correctamente'
+        destroy:
+          deleted: 'Formulario eliminado correctamente'
+        update:
+          updated_success: 'Formulario actualizado correctamente'
+
+      front:
+        save_form:
+          error_validation_val: 'Este valor es requerido'
+          email_invalid_val: 'Formato de correo electrónico in correcto'
+          captch_error_val: 'Error de código de seguridad'
+          success_form_val: 'Su mensaje a sido enviado satisfactoriamente. Muchas gracias!'
+          error_form_val: 'A ocurrido un error, por favor intente de nuevo'

@@ -1,0 +1,72 @@
+<%
+    @_plugin_fields_counter||= 1; id = "field_#{@_plugin_fields_counter+=1}"
+    field = (field || {field_options: {}, field_type: field_type}).with_indifferent_access
+    cid = field[:cid] || cid
+%>
+<li class="panel panel-default panel-success panel-item" id="<%= id %>">
+    <%= hidden_field_tag "fields[#{cid}][field_type]", field[:field_type] %>
+    <div class="panel-heading">
+        <h3 class="panel-title"><span class="span-title"><%= t("plugins.cama_contact_form.admin_forms.edit.fields.#{field[:field_type]}", default: field[:field_type].titleize) %></span> <i><small>[<%= cid %>]</small></i></h3>
+        <ul class="panel-controls">
+            <li><a data-placement="left" data-toggle="tooltip" title="" href="#" class="panel-sortable" data-original-title="Sortable"><span class="fa fa-arrows"></span></a></li>
+            <li><a data-placement="left" data-toggle="tooltip" title="" href="#" class="panel-delete" data-original-title="Delete"><span class="fa fa-times text-danger"></span></a></li>
+            <li><a href="#" class="panel-collapse" data-original-title="" title=""><span class="fa fa-angle-up"></span></a></li>
+        </ul>
+    </div>
+    <div class="panel-body">
+        <%= hidden_field_tag "fields[#{cid}][cid]", cid %>
+        <div class="form-group ">
+            <label for=""><%= t('.label') %></label><br>
+            <%= text_field_tag "fields[#{cid}][label]", field[:label], class: 'form-control translatable' %>
+        </div>
+        <div class="form-group ">
+            <label for=""><%= t('.is_required', default: 'Is Required?') %></label><br>
+            <%= hidden_field_tag "fields[#{cid}][required]", false %>
+            <%= check_box_tag "fields[#{cid}][required]", true, field[:required].to_s.cama_true? %>
+        </div>
+        <div class="form-group ">
+            <label><%= t('.descr', default: 'Description') %></label><br>
+            <%= text_area_tag "fields[#{cid}][field_options][description]", field[:field_options][:description], class: 'form-control translatable' %>
+        </div>
+        <% case field[:field_type] %>
+            <% when 'checkboxes', 'radio', 'select', 'dropdown'; options = (field[:field_options][:options] || []) %>
+                <label><%= t('.options', default: 'Options') %></label>
+                <ul class="options_sortable" data-options-count="<%= options.size %>">
+                    <% options.unshift({label: '', checked: false}).each_with_index do |option, index| %>
+                        <li class="<%= 'hidden' if index == 0 %>">
+                            <div class="actions">
+                                <i class="fa fa-arrows options-sortable" style="cursor: move"></i> <i class="fa fa-times text-danger option-delete" style="cursor: pointer"></i>
+                            </div>
+                            <div class="inputs input-group">
+                                <%= text_field_tag "fields[#{cid}][field_options][options][#{index}][label]", option[:label], class: 'form-control required translatable', placeholder: t('.here_label', default: 'Here your label'), disabled: index == 0 %>
+                                <div class="input-group-addon" style="border: none">
+                                    <label>
+                                        <%= check_box_tag "fields[#{cid}][field_options][options][#{index}][checked]", true, option[:checked].to_s.cama_true?, class: '', disabled: index == 0 %> <%= t('.default', default: 'Default') %>
+                                    </label>
+                                </div>
+                            </div>
+                        </li>
+                    <% end %>
+                </ul>
+                <button type="button" class="btn btn-default btn-xs add_option"><%= t('.add_option', default: 'Add Option') %></button>
+        <% end %>
+        <div>
+            <a class="btn btn-default btn-xs html_btn"><%= t('.html_code', default: 'HTML Code') %> <i class='fa fa-cog'></i></a>
+            <div class="hidden">
+                <hr>
+                <div class="form-group ">
+                    <label><%= t('.custom_class', default: 'Custom Class') %></label><br>
+                    <%= text_field_tag "fields[#{cid}][field_options][field_class]", field[:field_options][:field_class], class: 'form-control' %>
+                </div>
+                <div class="form-group">
+                    <%= label_tag nil, t('.template', default: 'Template') %>
+                    <%= text_area_tag "fields[#{cid}][field_options][template]", field[:field_options][:template], class: 'form-control', rows: 6, placeholder: Plugins::CamaContactForm::CamaContactForm::field_template %>
+                </div>
+                <div class="form-group">
+                    <%= label_tag nil, t('.attributes', default: 'Field Attributes') %>
+                    <%= text_field_tag "fields[#{cid}][field_options][field_attributes]", field[:field_options][:field_attributes], class: 'form-control', placeholder: '{"style": "color: red;", "data-my-attr": "xx"}' %>
+                </div>
+            </div>
+        </div>
+    </div>
+</li>
