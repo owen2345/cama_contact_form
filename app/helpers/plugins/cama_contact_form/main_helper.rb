@@ -112,9 +112,9 @@ module Plugins::CamaContactForm::MainHelper
           temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], "select",values)
         else
       end
-      r[:template] = r[:template].sub('[label ci]', for_name).sub('[ci]', temp2)
+      r[:template] = r[:template].sub('[ci]', temp2)
       r[:template] = r[:template].sub('[descr ci]', field_options[:description] || "").sub('<p></p>', '')
-      html += r[:template]
+      html += r[:template].gsub('[label ci]', for_name)
     end
     html
   end

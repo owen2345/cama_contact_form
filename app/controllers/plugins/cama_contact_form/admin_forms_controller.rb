@@ -1,7 +1,7 @@
 class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::PluginsAdminController
   include Plugins::CamaContactForm::MainHelper
   before_action :set_form, only: ['show','edit','update','destroy']
-  add_breadcrumb I18n.t("plugins.cama_contact_form.title"), :admin_plugins_cama_contact_form_admin_forms_path
+  add_breadcrumb I18n.t("plugins.cama_contact_form.title", default: 'Contact Form'), :admin_plugins_cama_contact_form_admin_forms_path
 
   def index
     @forms = current_site.contact_forms.where("parent_id is null").all
@@ -9,7 +9,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   end
 
   def edit
-    add_breadcrumb I18n.t("plugins.cama_contact_form.edit_view")
+    add_breadcrumb I18n.t("plugins.cama_contact_form.edit_view", default: 'Edit contact form')
     append_asset_libraries({"plugin_contact_form"=> { js: [plugin_asset_path("js/contact_form.js")], css: [plugin_asset_path("css/contact-form.css")] }})
     render "edit"
   end
@@ -23,7 +23,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
         fields << v
       }
       @form.update({settings: settings.to_json, value: {fields: fields}.to_json})
-      flash[:notice] = t('.updated_success')
+      flash[:notice] = t('.updated_success', default: 'Updated successfully')
       redirect_to action: :edit, id: @form.id
     else
       edit
@@ -33,7 +33,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   def create
     @form = current_site.contact_forms.new(params.require(:plugins_cama_contact_form_cama_contact_form).permit(:name, :slug))
     if @form.save
-      flash[:notice] = "#{t('.created')}"
+      flash[:notice] = "#{t('.created', default: 'Created successfully')}"
       redirect_to action: :edit, id: @form.id
     else
       flash[:error] = @form.errors.full_messages.join(', ')
@@ -42,12 +42,12 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   end
 
   def destroy
-    flash[:notice] = "#{t('.deleted')}" if @form.destroy
+    flash[:notice] = "#{t('.deleted', default: 'Destroyed successfully')}" if @form.destroy
     redirect_to action: :index
   end
 
   def responses
-    add_breadcrumb I18n.t("plugins.cama_contact_form.list_responses")
+    add_breadcrumb I18n.t("plugins.cama_contact_form.list_responses", default: 'Contact form records')
     @form = current_site.contact_forms.where({id: params[:admin_form_id]}).first
     values = JSON.parse(@form.value).to_sym
     @op_fields = values[:fields]
