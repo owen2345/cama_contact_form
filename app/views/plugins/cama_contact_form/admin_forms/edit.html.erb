@@ -74,7 +74,7 @@
 
                     <div class="form-group">
                         <label for="railscf_mail_body"><%= t('.body', default: 'Email message to prepend') %>:</label><br>
-                        <textarea rows="4" cols="5" id="railscf_mail_body" class="form-control translatable" name="railscf_mail[body]"><%= @form.the_settings[:railscf_mail][:body] rescue t('plugin.contact_form.body_value') %></textarea>
+                        <textarea rows="4" cols="5" id="railscf_mail_body" class="form-control translatable" name="railscf_mail[body]"><%= @form.the_settings[:railscf_mail][:body] rescue '' %></textarea>
                     </div>
                     <div class="form-group hidden">
                         <label><%= t('.name_button') %>:</label>
