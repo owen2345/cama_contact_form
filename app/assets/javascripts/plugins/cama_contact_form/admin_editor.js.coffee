@@ -5,7 +5,7 @@ $ ->
   panel.find('#fields_available a').click ->
     showLoading()
     my_fields.attr('data-cid', parseInt(my_fields.attr('data-cid')) + 1)
-    $.get(panel.find('#fields_available').attr('data-remote_url'), {kind: $(this).attr('data-field-type'), cid: my_fields.attr('data-cid')}, (res)->
+    $.get(panel.find('#fields_available').attr('data-remote_url'), {kind: $(this).attr('data-field-type'), cid: 'c'+my_fields.attr('data-cid')}, (res)->
       res = $(res)
       my_fields.append(res)
       res.find('.options_sortable').sortable({handle: ".options-sortable"})
