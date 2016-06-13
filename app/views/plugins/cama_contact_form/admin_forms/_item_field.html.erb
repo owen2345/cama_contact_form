@@ -19,11 +19,13 @@
             <label for=""><%= t('.label') %></label><br>
             <%= text_field_tag "fields[#{cid}][label]", field[:label], class: 'form-control translatable' %>
         </div>
-        <div class="form-group ">
-            <label for=""><%= t('.is_required', default: 'Is Required?') %></label><br>
-            <%= hidden_field_tag "fields[#{cid}][required]", false %>
-            <%= check_box_tag "fields[#{cid}][required]", true, field[:required].to_s.cama_true? %>
-        </div>
+        <% unless ['button' 'submit', 'reset_button'].include?(field[:field_type]) %>
+            <div class="form-group ">
+                <label for=""><%= t('.is_required', default: 'Is Required?') %></label><br>
+                <%= hidden_field_tag "fields[#{cid}][required]", false %>
+                <%= check_box_tag "fields[#{cid}][required]", true, field[:required].to_s.cama_true? %>
+            </div>
+        <% end %>
         <div class="form-group ">
             <label><%= t('.descr', default: 'Description') %></label><br>
             <%= text_area_tag "fields[#{cid}][field_options][description]", field[:field_options][:description], class: 'form-control translatable' %>
