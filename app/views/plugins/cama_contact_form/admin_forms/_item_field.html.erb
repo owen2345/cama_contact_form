@@ -57,7 +57,7 @@
                 <% if ['paragraph','textarea','text', 'website', 'email'].include?(field[:field_type]) %>
                     <div class="form-group ">
                         <label><%= t('.default_value', default: 'Default Value') %></label><br>
-                        <%= text_field_tag "fields[#{cid}][default_value]", field[:default_value], class: 'form-control' %>
+                        <%= text_field_tag "fields[#{cid}][default_value]", field[:default_value], class: 'form-control translatable' %>
                     </div>
                 <% end %>
                 <div class="form-group ">

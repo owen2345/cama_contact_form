@@ -91,7 +91,7 @@ module Plugins::CamaContactForm::MainHelper
 
       case ob[:field_type].to_s
         when 'paragraph','textarea'
-          temp2 = "<textarea #{ob[:custom_attrs].to_attr_format} name=\"#{f_name}\" maxlength=\"#{field_options[:maxlength] || 500 }\"  class=\"#{ob[:custom_class]}  \">#{values[cid] || ob[:default_value]}</textarea>"
+          temp2 = "<textarea #{ob[:custom_attrs].to_attr_format} name=\"#{f_name}\" maxlength=\"#{field_options[:maxlength] || 500 }\"  class=\"#{ob[:custom_class]}  \">#{values[cid] || ob[:default_value].to_s.translate}</textarea>"
         when 'radio'
           temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], ob[:field_type],values)
         when 'checkboxes'
@@ -100,11 +100,13 @@ module Plugins::CamaContactForm::MainHelper
           temp2 = "<button #{ob[:custom_attrs].to_attr_format} type=\"#{ob[:field_type]}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].present? ? ob[:custom_class] : 'btn btn-default'}\">#{ob[:label]}</button>"
         when 'button'
           temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='button' name=\"#{f_name}\" class=\"#{ob[:custom_class].present? ? ob[:custom_class] : 'btn btn-default'}\">#{ob[:label]}</button>"
+        when 'reset_button'
+          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='reset' name=\"#{f_name}\" class=\"#{ob[:custom_class].present? ? ob[:custom_class] : 'btn btn-default'}\">#{ob[:label]}</button>"
         when 'text', 'website', 'email'
           class_type = ""
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="website"
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="email"
-          temp2 = "<input #{ob[:custom_attrs].to_attr_format} type=\"#{ob[:field_type]}\" value=\"#{values[cid] || ob[:default_value]}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class]} #{class_type}\">"
+          temp2 = "<input #{ob[:custom_attrs].to_attr_format} type=\"#{ob[:field_type]}\" value=\"#{values[cid] || ob[:default_value].to_s.translate}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class]} #{class_type}\">"
         when 'captcha'
           temp2 = cama_captcha_tag(5, {}, {class: "#{ob[:custom_class]} field-captcha required"}.merge(ob[:custom_attrs]))
         when 'file'
