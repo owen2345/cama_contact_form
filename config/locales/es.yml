@@ -66,6 +66,7 @@ es:
           add_option: 'Agregar opción'
           html_code: 'Código HTML'
           custom_class: 'Estilo Personalizado'
+          default_value: 'Valor por defecto'
           template: 'Plantilla'
           attributes: 'Attributos del campo'
 
