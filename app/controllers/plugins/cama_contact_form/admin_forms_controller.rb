@@ -10,7 +10,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
   def edit
     add_breadcrumb I18n.t("plugins.cama_contact_form.edit_view", default: 'Edit contact form')
-    append_asset_libraries({"plugin_contact_form"=> { js: [plugin_asset_path("js/contact_form.js")], css: [plugin_asset_path("css/contact-form.css")] }})
+    append_asset_libraries({"plugin_contact_form"=> { js: [plugin_asset_path("js/admin_editor.js")], css: [] }})
     render "edit"
   end
 
