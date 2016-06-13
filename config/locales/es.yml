@@ -56,6 +56,7 @@ es:
             text: 'Area de Texto'
             paragraph: 'Campo de Texto'
             file: 'Subir Archivo'
+            button: 'Botón Simple'
         item_field:
           label: 'Etiqueta'
           descr: 'Descripción'

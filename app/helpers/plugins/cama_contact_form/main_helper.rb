@@ -98,6 +98,8 @@ module Plugins::CamaContactForm::MainHelper
           temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], "checkbox",values)
         when 'submit'
           temp2 = "<button #{ob[:custom_attrs].to_attr_format} type=\"#{ob[:field_type]}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].present? ? ob[:custom_class] : 'btn btn-default'}\">#{ob[:label]}</button>"
+        when 'button'
+          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='button' name=\"#{f_name}\" class=\"#{ob[:custom_class].present? ? ob[:custom_class] : 'btn btn-default'}\">#{ob[:label]}</button>"
         when 'text', 'website', 'email'
           class_type = ""
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="website"
