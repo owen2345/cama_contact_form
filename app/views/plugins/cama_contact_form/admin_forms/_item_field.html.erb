@@ -19,7 +19,7 @@
             <label for=""><%= t('.label') %></label><br>
             <%= text_field_tag "fields[#{cid}][label]", field[:label], class: 'form-control translatable' %>
         </div>
-        <% unless ['button' 'submit', 'reset_button'].include?(field[:field_type]) %>
+        <% unless ['button', 'submit', 'reset_button'].include?(field[:field_type]) %>
             <div class="form-group ">
                 <label for=""><%= t('.is_required', default: 'Is Required?') %></label><br>
                 <%= hidden_field_tag "fields[#{cid}][required]", false %>
