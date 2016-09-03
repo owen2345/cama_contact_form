@@ -8,7 +8,7 @@
         <td style="width: 50%; float: left">
           <% fields.each do |key, value| %>
             <div class="data_field">
-              <strong><%= key %>:</strong>
+              <strong><%= key.to_s.translate %>:</strong>
               <%= value[0] %>
             </div>
           <% end %>

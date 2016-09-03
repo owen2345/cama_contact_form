@@ -83,7 +83,7 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
     values = {}
     form.fields.each do |field|
       cid = field[:cid].to_sym
-      label = values.keys.include?(field[:label]) ? "#{field[:label]} (#{cid})" : field[:label]
+      label = values.keys.include?(field[:label]) ? "#{field[:label]} (#{cid})" : field[:label].to_s.translate
       values[label] = []
       if field[:field_type] == 'submit' || field[:field_type] == 'button'
       elsif field[:field_type] == 'file'
