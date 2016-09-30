@@ -1,6 +1,6 @@
 class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   self.table_name = 'plugins_contact_forms'
-  belongs_to :site, class_name: "CamleonCms::Site"
+  belongs_to :site, class_name: "CamaleonCms::Site"
   # attr_accessible :site_id, :name, :description, :count, :slug, :value, :settings, :parent_id
 
   has_many :responses, :class_name => "Plugins::CamaContactForm::CamaContactForm", :foreign_key => :parent_id, dependent: :destroy
