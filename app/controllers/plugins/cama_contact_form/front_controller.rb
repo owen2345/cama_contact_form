@@ -2,6 +2,7 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
   include Plugins::CamaContactForm::MainHelper
   # here add your custom functions
   def save_form
+    flash[:contact_form] = {}
     @form = current_site.contact_forms.find_by_id(params[:id])
     fields = params[:fields]
     errors = []
@@ -9,9 +10,9 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
 
     perform_save_form(@form, fields, success, errors)
     if success.present?
-      flash[:notice] = success.join('<br>')
+      flash[:contact_form][:notice] = success.join('<br>')
     else
-      flash[:error] = errors.join('<br>')
+      flash[:contact_form][:error] = errors.join('<br>')
       flash[:values] = fields.delete_if{|k, v| v.class.name == 'ActionDispatch::Http::UploadedFile' }
     end
     redirect_to :back
