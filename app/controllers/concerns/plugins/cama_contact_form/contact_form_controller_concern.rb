@@ -6,7 +6,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
         if f[:field_type] == 'file'
           res = cama_tmp_upload(fields[f[:cid].to_sym], {maximum: 5.megabytes, path: Rails.public_path.join("contact_form", current_site.id.to_s)})
           if res[:error].present?
-            errors << res[:error]
+            errors << res[:error].to_s.translate
           else
             attachments << res[:file_path]
             fields[f[:cid].to_sym] = res[:file_path].sub(Rails.public_path.to_s, cama_root_url)
