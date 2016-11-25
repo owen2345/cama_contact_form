@@ -116,7 +116,7 @@ module Plugins::CamaContactForm::MainHelper
         else
       end
       r[:template] = r[:template].sub('[ci]', temp2)
-      r[:template] = r[:template].sub('[descr ci]', field_options[:description] || "").sub('<p></p>', '')
+      r[:template] = r[:template].sub('[descr ci]', field_options[:description].to_s.translate).sub('<p></p>', '')
       html += r[:template].gsub('[label ci]', for_name)
     end
     html
