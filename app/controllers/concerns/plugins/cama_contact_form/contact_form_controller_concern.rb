@@ -73,7 +73,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       elsif field[:field_type] == 'captcha'
         values[label] << '--'
       elsif field[:field_type] == 'radio' || field[:field_type] == 'checkboxes'
-        values[label] << fields[cid].join(',') if fields[cid].present?
+        values[label] << fields[cid].map { |f| f.to_s.translate }.join(', ') if fields[cid].present?
       else
         values[label] << fields[cid] if fields[cid].present?
       end
