@@ -49,7 +49,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     add_breadcrumb I18n.t("plugins.cama_contact_form.list_responses", default: 'Contact form records')
     @form = current_site.contact_forms.where({id: params[:admin_form_id]}).first
     values = JSON.parse(@form.value).to_sym
-    @op_fields = values[:fields]
+    @op_fields = values[:fields].select{ |field| relevant_field? field }
     @forms = current_site.contact_forms.where({parent_id: @form.id})
     @forms = @forms.paginate(:page => params[:page], :per_page => current_site.admin_per_page)
   end
@@ -71,5 +71,9 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
       flash[:error] = "Error form class"
       redirect_to cama_admin_path
     end
+  end
+
+  def relevant_field?(field)
+    !%w(captcha submit button).include? field[:field_type]
   end
 end
