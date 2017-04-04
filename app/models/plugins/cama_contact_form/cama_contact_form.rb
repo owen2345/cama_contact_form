@@ -10,6 +10,8 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   before_validation :before_validating
   before_create :fix_save_settings
 
+  default_scope { order(created_at: :desc) }
+
   # [{"label":"Untitled","field_type":"text","required":true,"field_options":{"size":"large","field_class":"Default"},"cid":"c2"},{"label":"Untitled","field_type":"paragraph","required":true,"field_options":{"size":"large","field_class":"Default"},"cid":"c6"},{"label":"Untitled","field_type":"captcha","required":true,"field_options":{"field_class":"Default"},"cid":"c10"},{"label":"Untitled","field_type":"checkboxes","required":true,"field_options":{"options":[{"label":"Default","checked":false},{"label":"Default","checked":false}],"field_class":"Default","description":"description\n"},"cid":"c12"}]
   def fields
     @_the_fields ||= JSON.parse(self.value || '{fields: []}').with_indifferent_access
