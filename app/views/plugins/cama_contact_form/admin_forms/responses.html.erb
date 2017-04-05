@@ -33,7 +33,7 @@
                     <% if default[:field_type] == "file" %>
                         <td><%= link_to(value[:fields][cid], value[:fields][cid]) %></td>
                     <% elsif default[:field_type] == "radio" || default[:field_type] == "checkboxes" %>
-                        <td><%= value[:fields][cid].map(&:inspect).join(', ') if value[:fields][cid].present? %></td>
+                        <td><%= value[:fields][cid].map { |f| f.to_s.translate }.join(', ') if value[:fields][cid].present? %></td>
                     <% else %>
                         <td><%= value[:fields][cid] %></td>
                     <% end %>
