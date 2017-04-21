@@ -1,0 +1,101 @@
+zh-CN:
+  plugins:
+    cama_contact_form:
+      title: '联系方式表单'
+      list_responses: '联系方式表单记录'
+      edit_view: '编辑联系方式表单'
+      admin_forms:
+        index:
+          title: '联系方式表单'
+          list_forms: '表单列表'
+          title_form: '新建表单'
+          name: '标题'
+          slug: 'Slug'
+          description: '描述'
+          shortcode: '代码片段'
+          count: '条目'
+          actions: '操作'
+          list_responses: '联系方式表单记录'
+          edit: '编辑表单'
+          delete: '删除表单'
+          msg_confirm: '您是否确定要删除这个表单？'
+
+        edit:
+          shortcode_msg: '复制代码片段'
+          submit_btn: '保存'
+          back_btn: '返回列表'
+          html_code: 'HTML代码'
+          before_code: '表单之前的代码'
+          after_code: '表单之后的代码'
+          form_notification_email_settings: '提醒邮箱设置'
+          to: '邮箱地址'
+          subject: '主题'
+          body: '邮件前缀'
+          confirmation_email_settings: '确认邮箱设置'
+          confirmation_email_descr: '您可以使用字段的代码来表示此字段的值，比如 Sample: Hello [c1]'
+          body_answer: '邮件信息'
+
+          form_settings_messages: '表单消息设置'
+          success_form_msg: '成功消息'
+          error_form_msg: '错误消息'
+          error_required_msg: '必填字段错误消息'
+          email_invalid_msg: '电子邮件无效消息'
+          captch_error_msg: '验证码无效消息'
+
+          my_fields: '字段'
+          all_fields: '可用字段'
+
+          fields:
+            submit: '提交按钮'
+            captcha: '验证码输入框'
+            checkboxes: '复选框'
+            radio: '单选框'
+            dropdown: '下拉框'
+            website: '站点链接'
+            email: '邮件输入框'
+            text: '文本框'
+            paragraph: '文本区域'
+            file: '文件上传'
+            button: '普通按钮'
+            reset_button: '重置按钮'
+        item_field:
+          label: '名称'
+          descr: '描述'
+          is_required: '是否必填?'
+          options: '选项字段'
+          here_label: '这是你的标签'
+          default: '缺省'
+          add_option: '添加选项'
+          html_code: 'HTML 代码'
+          custom_class: '自定义类名'
+          default_value: '默认值'
+          template: '模板'
+          attributes: '属性'
+
+
+        form:
+          name: '标题'
+          slug: 'Slug'
+          description: '描述'
+          back_btn: '返回'
+          submit_btn: '创建表单'
+
+        responses:
+          back_btn: '返回列表'
+          created_at: '创建于'
+          list_responses: '联系方式表单记录'
+
+        create:
+          created: '成功创建表单'
+        destroy:
+          deleted: '成功删除表单'
+        update:
+          updated_success: '成功更新表单'
+
+      front:
+        save_form:
+          error_validation_val: '该值是必须的！'
+          email_invalid_val: '错误的电子邮件格式！'
+          captch_error_val: '验证码错误！'
+          success_form_val: '你的消息已经成功发送，非常感谢您！'
+          error_form_val: '引发了一个错误，请重试！'
