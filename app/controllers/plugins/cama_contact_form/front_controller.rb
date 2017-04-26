@@ -10,12 +10,15 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
     errors = []
     success = []
 
-    perform_save_form(@form, fields, success, errors)
-    if success.present?
-      flash[:contact_form][:notice] = success.join('<br>')
-    else
-      flash[:contact_form][:error] = errors.join('<br>')
-      flash[:values] = fields.delete_if{|k, v| v.class.name == 'ActionDispatch::Http::UploadedFile' }
+    args = {form: @form, values: fields, flag: true}; hooks_run("contact_form_before_submit", args)
+    if args[:flag]
+      perform_save_form(@form, fields, success, errors)
+      if success.present?
+        flash[:contact_form][:notice] = success.join('<br>')
+      else
+        flash[:contact_form][:error] = errors.join('<br>')
+        flash[:values] = fields.delete_if{|k, v| v.class.name == 'ActionDispatch::Http::UploadedFile' }
+      end
     end
     params[:format] == 'json' ? render(json: flash.discard(:contact_form).to_hash) : (redirect_to :back)
   end
