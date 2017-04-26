@@ -71,7 +71,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       elsif field[:field_type] == 'file'
         values[label] << fields[cid].split('/').last if fields[cid].present?
       elsif field[:field_type] == 'captcha'
-        values[label] << "--<span style='display:none;'>#{fields[cid]}</span>"
+        values[label] << (params[:captcha] rescue '')
       elsif field[:field_type] == 'radio' || field[:field_type] == 'checkboxes'
         values[label] << fields[cid].map { |f| f.to_s.translate }.join(', ') if fields[cid].present?
       else
