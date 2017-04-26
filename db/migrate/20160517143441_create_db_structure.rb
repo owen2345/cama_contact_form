@@ -1,3 +1,4 @@
+# This migration comes from cama_contact_form_engine (originally 20160517143441)
 class CreateDbStructure < ActiveRecord::Migration
   def change
     unless table_exists? 'plugins_contact_forms'
@@ -8,8 +9,10 @@ class CreateDbStructure < ActiveRecord::Migration
         t.timestamps
       end
     end
-    CamaleonCms::Site.all.each do |s|
-      s.plugins.where(slug: 'contact_form').update_all(slug: 'cama_contact_form')
+    if ActiveRecord::Base.connection.table_exists? 'cama_term_taxonomy'
+      CamaleonCms::Site.all.each do |s|
+        s.plugins.where(slug: 'contact_form').update_all(slug: 'cama_contact_form')
+      end
     end
   end
 end
