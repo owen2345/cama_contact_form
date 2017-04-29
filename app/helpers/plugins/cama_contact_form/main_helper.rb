@@ -82,6 +82,7 @@ module Plugins::CamaContactForm::MainHelper
       ob = r[:field]
       ob[:custom_class] = r[:custom_class]
       ob[:custom_attrs] = r[:custom_attrs]
+      ob[:custom_attrs][:required] = 'true' if ob[:required].present? && ob[:required].to_bool
       field_options = ob[:field_options]
       for_name = ob[:label].to_s
       f_name = "fields[#{ob[:cid]}]"
