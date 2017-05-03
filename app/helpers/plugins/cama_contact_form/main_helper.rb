@@ -139,15 +139,16 @@ module Plugins::CamaContactForm::MainHelper
     end
 
     options.each do |op|
+      label = op[:label].translate
       if type == "radio" || type == "checkbox"
         html += "<div class=\"#{type} #{ob[:custom_class]}\">
                     <label for=\"#{ob[:cid]}\">
-                      <input #{ob[:custom_attrs].to_attr_format} type=\"#{type}\" #{'checked' if op[:checked].to_s.cama_true?} name=\"#{f_name}[]\" class=\"\" value=\"#{op[:label].downcase}\">
-                      #{op[:label]}
+                      <input #{ob[:custom_attrs].to_attr_format} type=\"#{type}\" #{'checked' if op[:checked].to_s.cama_true?} name=\"#{f_name}[]\" class=\"\" value=\"#{label.downcase}\">
+                      #{label}
                     </label>
                   </div>"
       else
-        html += "<option  value=\"#{op[:label].downcase.gsub(" ", "_")}\" #{"selected" if "#{op[:label].downcase.gsub(" ", "_")}" == values[cid] || op[:checked].to_s.cama_true? } >#{op[:label]}</option>"
+        html += "<option  value=\"#{label.downcase.gsub(" ", "_")}\" #{"selected" if "#{label.downcase.gsub(" ", "_")}" == values[cid] || op[:checked].to_s.cama_true? } >#{label}</option>"
       end
     end
 
