@@ -22,6 +22,7 @@
                 <th><%= f[:label].to_s.translate %></th>
               <% end %>
               <th><%= t('.created_at', default: 'Registered at') %></th>
+              <th></th>
             </tr>
             </thead>
             <tbody>
@@ -39,6 +40,12 @@
                     <% end %>
                 <% end %>
                     <td><%= value[:created_at] %></td>
+                    <td>
+                      <%= link_to raw('<i class="fa fa-times"></i>'),
+                                  { action: :del_response, response_id: form.id },
+                                  method: :delete, data: { confirm: t('.actions.confirm_delete', default: 'Are you sure?') },
+                                  class: 'btn btn-danger btn-xs', title: t('.actions.delete', default: 'Delete') %>
+                    </td>
                 </tr>
             <% end %>
             </tbody>

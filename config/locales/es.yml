@@ -84,6 +84,8 @@ es:
           back_btn: 'Volver al listado'
           created_at: 'Fecha de Registro'
           list_responses: 'Lista de Registros'
+          actions:
+            delete: 'Borrar'
 
         create:
           created: 'Formulario creado correctamente'
