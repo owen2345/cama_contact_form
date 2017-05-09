@@ -64,20 +64,23 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   def convert_form_values(form, fields)
     values = {}
     form.fields.each do |field|
+      next unless relevant_field?(field)
+      ft = field[:field_type]
       cid = field[:cid].to_sym
       label = values.keys.include?(field[:label]) ? "#{field[:label]} (#{cid})" : field[:label].to_s.translate
       values[label] = []
-      if field[:field_type] == 'submit' || field[:field_type] == 'button'
-      elsif field[:field_type] == 'file'
+      if ft == 'file'
         values[label] << fields[cid].split('/').last if fields[cid].present?
-      elsif field[:field_type] == 'captcha'
-        values[label] << (params[:captcha] rescue '')
-      elsif field[:field_type] == 'radio' || field[:field_type] == 'checkboxes'
+      elsif ft == 'radio' || ft == 'checkboxes'
         values[label] << fields[cid].map { |f| f.to_s.translate }.join(', ') if fields[cid].present?
       else
         values[label] << fields[cid] if fields[cid].present?
       end
     end
-    return values
+    values
+  end
+
+  def relevant_field?(field)
+    !%w(captcha submit button).include? field[:field_type]
   end
 end

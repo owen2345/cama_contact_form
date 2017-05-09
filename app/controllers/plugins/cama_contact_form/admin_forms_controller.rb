@@ -1,5 +1,6 @@
 class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::PluginsAdminController
   include Plugins::CamaContactForm::MainHelper
+  include Plugins::CamaContactForm::ContactFormControllerConcern
   before_action :set_form, only: ['show','edit','update','destroy']
   add_breadcrumb I18n.t("plugins.cama_contact_form.title", default: 'Contact Form'), :admin_plugins_cama_contact_form_admin_forms_path
 
@@ -71,9 +72,5 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
       flash[:error] = "Error form class"
       redirect_to cama_admin_path
     end
-  end
-
-  def relevant_field?(field)
-    !%w(captcha submit button).include? field[:field_type]
   end
 end
