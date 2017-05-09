@@ -15,6 +15,7 @@ Rails.application.routes.draw do
         namespace 'plugins' do
           namespace 'cama_contact_form' do
             resources :admin_forms  do
+              delete 'del_response'
               get 'responses'
               get 'item_field', on: :collection
             end
