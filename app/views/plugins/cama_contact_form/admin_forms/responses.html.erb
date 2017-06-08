@@ -32,7 +32,12 @@
                 <% @op_fields.each do |default| %>
                     <% cid = default[:cid].to_sym %>
                     <% if default[:field_type] == "file" %>
-                        <td><%= link_to(value[:fields][cid], value[:fields][cid]) %></td>
+                        <td>
+                        <%# flatten is necessary for backwards compatibility: ["file"].flatten == [["file]].flatten %>
+                        <% [value[:fields][cid]].flatten.each do |file| %>
+                            <%= link_to file.split('/').last, file %><br>
+                        <% end %>
+                        </td>
                     <% elsif default[:field_type] == "radio" || default[:field_type] == "checkboxes" %>
                         <td><%= value[:fields][cid].map { |f| f.to_s.translate }.join(', ') if value[:fields][cid].present? %></td>
                     <% else %>
