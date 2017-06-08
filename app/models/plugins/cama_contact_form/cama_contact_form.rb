@@ -1,4 +1,5 @@
 class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
+  include Plugins::CamaContactForm::MainHelper
   self.table_name = 'plugins_contact_forms'
   belongs_to :site, class_name: "CamaleonCms::Site"
   # attr_accessible :site_id, :name, :description, :count, :slug, :value, :settings, :parent_id
@@ -9,6 +10,7 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
 
   before_validation :before_validating
   before_create :fix_save_settings
+  before_destroy :delete_uploaded_files
 
   default_scope { order(created_at: :desc) }
 
@@ -41,5 +43,19 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   def fix_save_settings
     self.value = {"fields" => []}.to_json unless self.value.present?
     self.settings = {}.to_json unless self.settings.present?
+  end
+
+  def delete_uploaded_files
+    return if self.parent_id.nil?
+    form = self.class.find_by_id self.parent_id
+    response_data = the_settings[:fields]
+    file_cids = form.fields
+                    .select { |f| f[:field_type] == 'file' }
+                    .map { |f| f[:cid].to_sym }
+
+    file_cids
+        .flat_map { |cid| response_data[cid] }
+        .map { |file| file.sub Rails.application.routes.url_helpers.cama_root_url, Rails.public_path.to_s }
+        .each { |file| File.delete file if File.exists? file }
   end
 end

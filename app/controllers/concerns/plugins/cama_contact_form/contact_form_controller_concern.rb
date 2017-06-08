@@ -4,13 +4,22 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     if validate_to_save_form(form, fields, errors)
       form.fields.each do |f|
         if f[:field_type] == 'file'
-          res = cama_tmp_upload(fields[f[:cid].to_sym], {maximum: 5.megabytes, path: Rails.public_path.join("contact_form", current_site.id.to_s)})
-          if res[:error].present?
-            errors << res[:error].to_s.translate
-          else
-            attachments << res[:file_path]
-            fields[f[:cid].to_sym] = res[:file_path].sub(Rails.public_path.to_s, cama_root_url)
+          file_paths = []
+          fields[f[:cid].to_sym].each do |file|
+            res = cama_tmp_upload(file, {
+                maximum: current_site.get_option('filesystem_max_size', 100).megabytes,
+                path: Rails.public_path.join("contact_form", current_site.id.to_s),
+                name: file.original_filename
+              }
+            )
+            if res[:error].present?
+              errors << res[:error].to_s.translate
+            else
+              attachments << res[:file_path]
+              file_paths << res[:file_path].sub(Rails.public_path.to_s, cama_root_url)
+            end
           end
+          fields[f[:cid].to_sym] = file_paths
         end
       end
       new_settings = {"fields" => fields, "created_at" => Time.current.strftime("%Y-%m-%d %H:%M:%S").to_s}.to_json
@@ -27,7 +36,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
           cama_send_email(answer_to, form.the_settings[:railscf_mail][:subject_answer].to_s.translate.cama_replace_codes(fields), {content: content})
         end
       else
-        errors << form.the_message('mail_sent_ng', t('.error_form_val', default: 'Occurred an error, please try again.'))
+        errors << form.the_message('mail_sent_ng', t('.error_form_val', default: 'An error occurred, please try again.'))
       end
     end
   end
@@ -44,8 +53,8 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
             errors << "#{label.to_s.translate}: #{form.the_message('invalid_required', t('.error_validation_val', default: 'This value is required'))}"
             validate = false
           end
-          if f[:field_type].to_s == "email"
-            if !fields[cid].match(/@/)
+          if f[:field_type].to_s == 'email'
+            unless fields[cid].match(/@/)
               errors << "#{label.to_s.translate}: #{form.the_message('invalid_email', t('.email_invalid_val', default: 'The e-mail address appears invalid'))}"
               validate = false
             end
@@ -70,7 +79,8 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       label = values.keys.include?(field[:label]) ? "#{field[:label]} (#{cid})" : field[:label].to_s.translate
       values[label] = []
       if ft == 'file'
-        values[label] << fields[cid].split('/').last if fields[cid].present?
+        nr_files = fields[cid].size
+        values[label] << "#{nr_files} #{"file".pluralize(nr_files)} (attached)" if fields[cid].present?
       elsif ft == 'radio' || ft == 'checkboxes'
         values[label] << fields[cid].map { |f| f.to_s.translate }.join(', ') if fields[cid].present?
       else
