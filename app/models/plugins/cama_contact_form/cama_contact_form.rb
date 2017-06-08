@@ -48,15 +48,14 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   def delete_uploaded_files
     return if self.parent_id.nil?
     form = self.class.find_by_id self.parent_id
+    response_data = the_settings[:fields]
     file_cids = form.fields
                     .select { |f| f[:field_type] == 'file' }
                     .map { |f| f[:cid].to_sym }
-    file_cids.each { |cid|
-      # Flatten because of backwards compatibility (file could be a string or an array)
-      [the_settings[:fields][cid]].flatten.each { |file|
-        file = file.sub(Rails.application.routes.url_helpers.cama_root_url, Rails.public_path.to_s)
-        File.delete file if File.exists? file
-      }
-    }
+
+    file_cids
+        .flat_map { |cid| response_data[cid] }
+        .map { |file| file.sub Rails.application.routes.url_helpers.cama_root_url, Rails.public_path.to_s }
+        .each { |file| File.delete file if File.exists? file }
   end
 end
