@@ -57,23 +57,8 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
   def del_response
     response = current_site.contact_forms.find_by_id(params[:response_id])
-    if response.present?
-      response_data = response.the_settings
-      if response.destroy
-        # Delete files if any
-        form = current_site.contact_forms.find_by_id(response.parent_id)
-        file_cids = form.fields
-                        .select { |f| f[:field_type] == 'file' }
-                        .map { |f| f[:cid].to_sym }
-        file_cids.each { |cid|
-          # Flatten because of backwards compatibility (file could be a string or an array)
-          [response_data[:fields][cid]].flatten.each { |file|
-            file = to_local_path(file)
-            File.delete file if File.exists? file
-          }
-        }
-        flash[:notice] = "#{t('.actions.msg_deleted', default: 'The response has been deleted')}"
-      end
+    if response.present? && response.destroy
+      flash[:notice] = "#{t('.actions.msg_deleted', default: 'The response has been deleted')}"
     end
     redirect_to action: :responses
   end

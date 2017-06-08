@@ -16,7 +16,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
               errors << res[:error].to_s.translate
             else
               attachments << res[:file_path]
-              file_paths << to_public_path(res[:file_path])
+              file_paths << res[:file_path].sub(Rails.public_path.to_s, cama_root_url)
             end
           end
           fields[f[:cid].to_sym] = file_paths
@@ -92,13 +92,5 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
 
   def relevant_field?(field)
     !%w(captcha submit button).include? field[:field_type]
-  end
-
-  def to_public_path(file_path)
-    file_path.sub(Rails.public_path.to_s, cama_root_url)
-  end
-
-  def to_local_path(file_path)
-    file_path.sub(cama_root_url, Rails.public_path.to_s)
   end
 end
