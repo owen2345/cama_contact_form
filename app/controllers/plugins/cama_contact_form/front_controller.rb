@@ -20,7 +20,7 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
         flash[:values] = fields.delete_if{|k, v| v.class.name == 'ActionDispatch::Http::UploadedFile' }
       end
     end
-    params[:format] == 'json' ? render(json: flash.discard(:contact_form).to_hash) : (redirect_to :back)
+    params[:format] == 'json' ? render(json: flash.discard(:contact_form).to_hash) : (redirect_to request.referrer)
   end
 
 end

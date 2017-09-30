@@ -55,6 +55,16 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     @forms = @forms.paginate(:page => params[:page], :per_page => current_site.admin_per_page)
   end
 
+  def leads
+    add_breadcrumb I18n.t("plugins.cama_contact_form.leads", default: 'Leads')
+    @form = current_site.contact_forms.where({id: "1"}).first
+    values = JSON.parse(@form.value).to_sym
+    @op_fields = values[:fields].select{ |field| relevant_field? field }
+    @forms = current_site.contact_forms.where.not({id: @form.id})
+    @forms = @forms.paginate(:page => params[:page], :per_page => current_site.admin_per_page)
+  end
+
+
   def del_response
     response = current_site.contact_forms.find_by_id(params[:response_id])
     if response.present? && response.destroy

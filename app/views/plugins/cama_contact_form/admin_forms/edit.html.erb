@@ -86,6 +86,23 @@
 
         <div class="panel panel-default">
             <div class="panel-heading">
+                <h3 class="panel-title"><%= t('.form_notification_email_settings', default: 'Campaign Settings') %></h3>
+                <ul class="panel-controls">
+                    <li><a href="#" class="panel-collapse"><span class="fa fa-angle-down"></span></a></li>
+                </ul>
+            </div>
+            <div class="panel-body">
+                <div class="">
+                    <div class="form-group">
+                        <label for="railscf_mail_to"><%= t('.to', default: 'Email') %> <abbr title="required">*</abbr>:</label><br>
+                        <input id="railscf_mail_to" class="form-control required" type="text" name="railscf_mail[to]" value="<%= @form.the_settings[:railscf_mail][:to] rescue '' %>" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
                 <h3 class="panel-title"><%= t('.confirmation_email_settings', default: 'Confirmation Email Settings') %></h3>
                 <ul class="panel-controls">
                     <li><a href="#" class="panel-collapse"><span class="fa fa-angle-down"></span></a></li>
