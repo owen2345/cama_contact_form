@@ -55,6 +55,7 @@ module Plugins::CamaContactForm::MainHelper
 
   def contact_form_admin_before_load
     admin_menu_append_menu_item("settings", {icon: "envelope-o", title: t('plugins.cama_contact_form.title', default: 'Contact Form'), url: admin_plugins_cama_contact_form_admin_forms_path, datas: "data-intro='This plugin permit you to create you contact forms with desired fields and paste your short_code in any content.' data-position='right'"})
+    admin_menu_insert_menu_after("dashboard", "leads", {icon: "podcast", title: t('plugins.cama_contact_form.title', default: 'Leads'), url: admin_plugins_cama_contact_form_leads_path, datas: "data-intro='Show all leads from contact forms' data-position='right'"})
   end
 
   def contact_form_app_before_load
