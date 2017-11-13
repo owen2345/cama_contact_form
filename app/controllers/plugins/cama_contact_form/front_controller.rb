@@ -20,7 +20,10 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
         flash[:values] = fields.delete_if{|k, v| v.class.name == 'ActionDispatch::Http::UploadedFile' }
       end
     end
-    params[:format] == 'json' ? render(json: flash.discard(:contact_form).to_hash) : (redirect_to :back)
+    if Rails::VERSION::MAJOR >= 5
+      params[:format] == 'json' ? render(json: flash.discard(:contact_form).to_hash) : (redirect_back fallback_location: cama_root_path)
+    else
+      params[:format] == 'json' ? render(json: flash.discard(:contact_form).to_hash) : (redirect_to :back)
+    end
   end
-
 end
