@@ -32,6 +32,22 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   def self.field_template
     "<div class='form-group'>\n\t <label>[label ci]</label>\n\t<p>[descr ci]</p>\n\t<div>[ci]</div> \n</div>"
   end
+  
+  # define recaptcha settings
+  def set_captcha_settings!
+    if recaptcha_enabled?
+      Recaptcha.configure do |config|
+        config.site_key  = the_settings[:recaptcha_site_key]
+        config.secret_key = the_settings[:recaptcha_secret_key]
+      end
+    end
+  end
+  
+  # verify if recaptcha was enabled for this form
+  # this method can be overwritten if recaptcha was already defined on initializers to return true as default 
+  def recaptcha_enabled?
+    the_settings[:recaptcha_site_key].present?
+  end
 
   private
   def before_validating

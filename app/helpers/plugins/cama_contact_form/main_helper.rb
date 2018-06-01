@@ -1,4 +1,5 @@
 module Plugins::CamaContactForm::MainHelper
+  include Recaptcha::ClientHelper
   def self.included(klass)
     klass.helper_method [:cama_form_element_bootstrap_object, :cama_form_shortcode] rescue "" # here your methods accessible from views
   end
@@ -109,7 +110,11 @@ module Plugins::CamaContactForm::MainHelper
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="email"
           temp2 = "<input #{ob[:custom_attrs].to_attr_format} type=\"#{ob[:field_type]}\" value=\"#{values[cid] || ob[:default_value].to_s.translate}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'form-control'} #{class_type}\">"
         when 'captcha'
-          temp2 = cama_captcha_tag(5, {}, {class: "#{ob[:custom_class].presence || 'form-control'} field-captcha required"}.merge(ob[:custom_attrs]))
+          if form.recaptcha_enabled?
+            temp2 = recaptcha_tags
+          else
+            temp2 = cama_captcha_tag(5, {}, {class: "#{ob[:custom_class].presence || 'form-control'} field-captcha required"}.merge(ob[:custom_attrs]))
+          end
         when 'file'
           temp2 = "<input multiple=\"multiple\" type=\"file\" value=\"\" name=\"#{f_name}[]\" #{ob[:custom_attrs].to_attr_format} class=\"#{ob[:custom_class].presence || 'form-control'}\">"
         when 'dropdown'

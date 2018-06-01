@@ -85,6 +85,29 @@
         </div>
 
         <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title"><%= t('.form_recaptcha_title', default: 'Recaptcha Settings') %></h3>
+            <ul class="panel-controls">
+              <li><a href="#" class="panel-collapse"><span class="fa fa-angle-down"></span></a></li>
+            </ul>
+          </div>
+          <div class="panel-body">
+            <div class="alert alert-info alert-xs" style="padding: 2px"><small><%= t('.recaptcha_info', default: 'If recaptcha settings is defined, will use recaptcha rather than classic captcha') %></small></div>
+            <div class="">
+              <div class="form-group">
+                <label><%= t('.recaptcha_site_key', default: 'Site Key') %>:</label><br>
+                <input class="form-control" type="text" name="recaptcha_site_key" value="<%= @form.the_settings[:recaptcha_site_key] rescue '' %>" />
+              </div>
+  
+              <div class="form-group">
+                <label><%= t('.recaptcha_secret_key', default: 'Secret Key') %>:</label><br>
+                <input class="form-control" type="text" name="recaptcha_secret_key" value="<%= @form.the_settings[:recaptcha_secret_key] rescue '' %>" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-default">
             <div class="panel-heading">
                 <h3 class="panel-title"><%= t('.confirmation_email_settings', default: 'Confirmation Email Settings') %></h3>
                 <ul class="panel-controls">

@@ -1,6 +1,7 @@
 <%
    @form =  attributes['slug'] == '__first__' ? current_site.contact_forms.first : current_site.contact_forms.where({slug: attributes['slug']}).first
    if @form.present?
+     @form.set_captcha_settings!
      values_fields =  (flash[:values].present?)? flash[:values].to_sym : {}
      values = JSON.parse(@form.value).to_sym
      r = {form: @form, form_class: "railscf-form railscf-form-group", before_form: @form.the_settings[:railscf_mail][:previous_html].to_s, after_form: @form.the_settings[:railscf_mail][:after_html].to_s, submit: "<div class='form-group'><button class='submit_btn btn btn-default pull-right' type='submit'>[submit_label]</button></div>"}

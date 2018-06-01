@@ -16,7 +16,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
   def update
     if @form.update(params.require(:plugins_cama_contact_form_cama_contact_form).permit(:name, :slug))
-      settings = {"railscf_mail" => params[:railscf_mail], "railscf_message" => params[:railscf_message], "railscf_form_button" => params[:railscf_form_button]}
+      settings = {"railscf_mail" => params[:railscf_mail], "railscf_message" => params[:railscf_message], "railscf_form_button" => params[:railscf_form_button], recaptcha_site_key: params[:recaptcha_site_key], recaptcha_secret_key: params[:recaptcha_secret_key]}
       fields = []
       (params[:fields] || {}).each{|k, v|
         v[:field_options][:options] = v[:field_options][:options].values if v[:field_options][:options].present?

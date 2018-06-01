@@ -60,9 +60,16 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
             end
           end
         when 'captcha'
-          unless cama_captcha_verified?
+          error_message = ->{
             errors << "#{label.to_s.translate}: #{form.the_message('captcha_not_match', t('.captch_error_val', default: 'The entered code is incorrect'))}"
             validate = false
+          }
+            
+          if form.recaptcha_enabled?
+            form.set_captcha_settings!
+            error_message.call unless verify_recaptcha
+          else
+            error_message.call unless cama_captcha_verified?
           end
       end
     end
