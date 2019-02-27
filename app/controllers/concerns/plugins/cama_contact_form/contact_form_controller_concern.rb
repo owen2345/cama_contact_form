@@ -5,7 +5,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       form.fields.each do |f|
         if f[:field_type] == 'file'
           file_paths = []
-          fields[f[:cid].to_sym].each do |file|
+          fields[f[:cid].to_sym].to_a.each do |file|
             res = cama_tmp_upload(file, {
                 maximum: current_site.get_option('filesystem_max_size', 100).megabytes,
                 path: Rails.public_path.join("contact_form", current_site.id.to_s),
@@ -64,7 +64,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
             errors << "#{label.to_s.translate}: #{form.the_message('captcha_not_match', t('.captch_error_val', default: 'The entered code is incorrect'))}"
             validate = false
           }
-            
+
           if form.recaptcha_enabled?
             form.set_captcha_settings!
             error_message.call unless verify_recaptcha
