@@ -1,5 +1,5 @@
 module Plugins::CamaContactForm::MainHelper
-  include Recaptcha::ClientHelper
+  include Recaptcha::Adapters::ViewMethods
   def self.included(klass)
     klass.helper_method [:cama_form_element_bootstrap_object, :cama_form_shortcode] rescue "" # here your methods accessible from views
   end
