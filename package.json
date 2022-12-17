@@ -1,0 +1,16 @@
+{
+  "devDependencies": {
+    "eslint": "^8.0.1",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-n": "^15.0.0",
+    "eslint-plugin-promise": "^6.0.0"
+  },
+  "name": "cama_contact_form",
+  "version": "0.0.30",
+  "description": "This is a plugin for Camaleon CMS to manage Contact Forms",
+  "main": "index.js",
+  "repository": "https://github.com/owen2345/cama_contact_form",
+  "author": "owen2345 <owenperedo@gmail.com>",
+  "license": "MIT"
+}
