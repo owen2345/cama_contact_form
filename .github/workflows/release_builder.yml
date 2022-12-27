@@ -1,0 +1,25 @@
+on:
+  # Any pull request merged into master (hotfixes, releases)
+  #   should publish the corresponding github release + git tag
+  push:
+    branches:
+      - main
+      - master
+
+  workflow_dispatch: # build a new release manually (create release branch pointing to master branch)
+    inputs:
+      version_name:
+        # Edit release_builder.json#base_branches to support other branches
+        description: 'Release version name, sample: 1.0.0 (Only "develop" branch is supported)'
+        required: true
+
+name: Create Release
+
+jobs:
+  release-builder:
+    uses: owen2345/reusable-ci-cd-actions/.github/workflows/release_builder.yml@main
+    with:
+      commit_mode: false
+      create_release_pr: ${{ github.event.inputs && github.event.inputs.version_name || '' }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL || '' }}
