@@ -19,7 +19,7 @@ jobs:
   release-builder:
     uses: owen2345/reusable-ci-cd-actions/.github/workflows/release_builder.yml@main
     with:
-      commit_mode: false
+      commit_mode: true
       create_release_pr: ${{ github.event.inputs && github.event.inputs.version_name || '' }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL || '' }}
