@@ -16,7 +16,7 @@ $(function() {
         res.find('.options_sortable').sortable({ handle: '.options-sortable' })
         res.find('.add_option').click().click()
         res.find('.translatable').Translatable(ADMIN_TRANSLATIONS)
-        return hideLoading()
+        hideLoading()
       })
     return false
   })
@@ -27,7 +27,7 @@ $(function() {
 
     const clone = list.children().first().clone().removeClass('hidden')
     clone.find('input').prop('disabled', false).each(function() {
-      return $(this).attr('name', $(this).attr('name').replace('[0]', '[' + list.attr('data-options-count') + ']'))
+      $(this).attr('name', $(this).attr('name').replace('[0]', '[' + list.attr('data-options-count') + ']'))
     })
 
     list.append(clone)
@@ -42,7 +42,7 @@ $(function() {
 
   panel.on('click', '.panel-delete', function() {
     $(this).closest('li.panel').fadeOut('slow', function() {
-      return $(this).remove()
+      $(this).remove()
     })
     return false
   })
@@ -53,5 +53,5 @@ $(function() {
   })
 
   myFields.find('.options_sortable').sortable({ handle: '.options-sortable' })
-  return panel.find('.translatable').Translatable(ADMIN_TRANSLATIONS)
+  panel.find('.translatable').Translatable(ADMIN_TRANSLATIONS)
 })
