@@ -9,6 +9,10 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     @forms = @forms.paginate(:page => params[:page], :per_page => current_site.admin_per_page)
   end
 
+  def show
+
+  end
+
   def edit
     add_breadcrumb I18n.t("plugins.cama_contact_form.edit_view", default: 'Edit contact form')
     render "edit"
@@ -73,6 +77,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
   # here add your custom functions
   private
+
   def set_form
     begin
       @form = current_site.contact_forms.find_by_id(params[:id])
