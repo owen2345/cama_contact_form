@@ -1,6 +1,6 @@
 {
   "title": "Camaleon CMS Contact Form",
-  "descr": "Please check documentation <a href='http://camaleon.tuzitio.com/store/plugins/4'>here.</a>",
+  "descr": "Please check documentation <a href='https://camaleon.website/store/plugins/4'>here.</a>",
   "key": "cama_contact_form",
   "helpers": [
     "Plugins::CamaContactForm::MainHelper"
