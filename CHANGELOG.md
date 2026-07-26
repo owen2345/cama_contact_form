@@ -1,5 +1,39 @@
 # Change Log
 
+## 0.1.11
+
+Narrows the escaping introduced in 0.1.10, which was over-broad. **Supersedes 0.1.10 — upgrade
+straight to this version.**
+
+0.1.10 escaped every form-definition value, including field labels, descriptions and option labels.
+That closed the vulnerability but broke a legitimate capability: an administrator could no longer put
+so much as a `<strong>` or a link in a field label. The permission was called "Allow unfiltered HTML
+in contact forms" while covering only three of the nine positions a form renders.
+
+Escaping is now decided by **HTML context** rather than applied uniformly:
+
+- **Element content renders as markup** — field labels, descriptions, radio/checkbox option labels
+  and the submit button label, alongside the form wrappers and field templates that already did.
+  These are sanitized when the form is saved unless the author holds
+  `contact_form_unfiltered_html`, so a trusted author's formatting survives and an untrusted
+  author's script does not.
+- **Attribute values stay escaped unconditionally** — `field_options[:field_class]`,
+  `default_value`, and the `value` attribute derived from an option label. Sanitizing cannot protect
+  this context: `form-control" onfocus="alert(1)` contains no tags, so an HTML sanitizer returns it
+  unchanged and rendering it raw would inject a live event handler. There is no markup use case for
+  a CSS class or a prefilled input value.
+- **A visitor's own submitted values remain escaped in every position**, with no permission able to
+  exempt them. Unauthenticated input never passes through the save-time sanitizer.
+
+**Not covered:** markup in a *dropdown* option label still will not render. `<option>` is text-only
+per the HTML specification, so a browser discards any element inside it regardless of what the server
+emits. Radio and checkbox option labels render inside a `<label>` and are unaffected.
+
+**Behavior change from 0.1.10:** field labels, descriptions, option labels and the submit button
+label render as markup again. If you upgraded to 0.1.10 and saw markup in those fields turn into
+visible text, this restores it — but only for values saved by a trusted author, since existing values
+are re-sanitized the next time the form is saved.
+
 ## 0.1.10
 
 Reported by Amir Aliu and Enrik Mustafa. [#63](https://github.com/owen2345/cama_contact_form/pull/63)

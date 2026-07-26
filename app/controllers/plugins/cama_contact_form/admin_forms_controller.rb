@@ -79,14 +79,24 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # here add your custom functions
   private
 
-  # Two stored settings are rendered unescaped by design -- the markup wrapping a form
-  # (railscf_mail#previous_html / #after_html) -- as is each field's template. Escaping them would
-  # break the feature, so they are sanitized on save instead, unless the saving user is trusted.
+  # Everything the form renders into an element-content position is sanitized here rather than
+  # escaped at render time, so a trusted author can put real markup -- <strong>, a link -- into a
+  # label or description and have guests see it rendered.
   #
-  # field_options#field_attributes is deliberately NOT in this set. It is JSON, not HTML (running an
-  # HTML sanitizer over it would corrupt it), and it is already safe at render time: Camaleon's
-  # Hash#to_attr_format escapes attribute values and drops keys that are not valid attribute names.
-  UNFILTERED_HTML_SETTINGS = %w[previous_html after_html].freeze
+  # Attribute values are NOT in this set and are escaped at render instead. Sanitizing cannot protect
+  # that context: `form-control" onfocus="alert(1)` contains no tags, so the sanitizer returns it
+  # unchanged and rendering it raw would inject a live event handler. That covers field_class,
+  # default_value and the option values.
+  #
+  # field_options#field_attributes is excluded for a different reason: it is JSON, not HTML, so an
+  # HTML sanitizer would corrupt it. It is safe at render because Camaleon's Hash#to_attr_format
+  # escapes attribute values and drops keys that are not valid attribute names.
+  #
+  # A visitor's own submission is never in scope here -- it does not pass through this action at all,
+  # and is escaped unconditionally at render.
+  UNFILTERED_HTML_MAIL_KEYS = %w[previous_html after_html].freeze
+  UNFILTERED_HTML_FIELD_KEYS = %w[label].freeze
+  UNFILTERED_HTML_FIELD_OPTION_KEYS = %w[template description].freeze
 
   # Mirrors CamaleonCms::Post#trusted_for_unfiltered_html?: read the acting user and site from
   # CurrentRequest and fail closed (sanitize) when either is missing, so saves from background jobs,
@@ -102,20 +112,30 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
   def sanitize_unfiltered_html(settings, fields)
     mail = settings["railscf_mail"]
-    if mail.present?
-      UNFILTERED_HTML_SETTINGS.each do |key|
-        mail[key] = CamaleonRecord.cama_sanitize_translatable(mail[key].to_s) if mail[key].present?
-      end
-    end
+    UNFILTERED_HTML_MAIL_KEYS.each { |key| cf_sanitize_in!(mail, key) } if mail.present?
+
+    button = settings["railscf_form_button"]
+    cf_sanitize_in!(button, "name_button") if button.present?
 
     fields.each do |field|
-      options = field[:field_options]
-      next if options.blank? || options[:template].blank?
+      UNFILTERED_HTML_FIELD_KEYS.each { |key| cf_sanitize_in!(field, key) }
 
-      options[:template] = CamaleonRecord.cama_sanitize_translatable(options[:template].to_s)
+      options = field[:field_options]
+      next if options.blank?
+
+      UNFILTERED_HTML_FIELD_OPTION_KEYS.each { |key| cf_sanitize_in!(options, key) }
+      # Option labels render as the visible text of a radio/checkbox/option; the value attribute
+      # derived from them is escaped separately at render.
+      (options[:options] || []).each { |option| cf_sanitize_in!(option, "label") }
     end
 
     [settings, fields]
+  end
+
+  def cf_sanitize_in!(container, key)
+    return if container.blank? || container[key].blank?
+
+    container[key] = CamaleonRecord.cama_sanitize_translatable(container[key].to_s)
   end
 
   def set_form
