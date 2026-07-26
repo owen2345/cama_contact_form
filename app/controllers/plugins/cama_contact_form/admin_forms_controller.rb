@@ -26,6 +26,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
         v[:field_options][:options] = v[:field_options][:options].values if v[:field_options][:options].present?
         fields << v
       }
+      settings, fields = sanitize_unfiltered_html(settings, fields) unless trusted_for_unfiltered_html?
       @form.update({settings: settings.to_json, value: {fields: fields}.to_json})
       flash[:notice] = t('.updated_success', default: 'Updated successfully')
       redirect_to action: :edit, id: @form.id
@@ -77,6 +78,45 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
   # here add your custom functions
   private
+
+  # Two stored settings are rendered unescaped by design -- the markup wrapping a form
+  # (railscf_mail#previous_html / #after_html) -- as is each field's template. Escaping them would
+  # break the feature, so they are sanitized on save instead, unless the saving user is trusted.
+  #
+  # field_options#field_attributes is deliberately NOT in this set. It is JSON, not HTML (running an
+  # HTML sanitizer over it would corrupt it), and it is already safe at render time: Camaleon's
+  # Hash#to_attr_format escapes attribute values and drops keys that are not valid attribute names.
+  UNFILTERED_HTML_SETTINGS = %w[previous_html after_html].freeze
+
+  # Mirrors CamaleonCms::Post#trusted_for_unfiltered_html?: read the acting user and site from
+  # CurrentRequest and fail closed (sanitize) when either is missing, so saves from background jobs,
+  # rake tasks or the console are sanitized regardless of role. The site is guarded as well because
+  # Ability#initialize dereferences it for non-admin users and would otherwise raise mid-save.
+  def trusted_for_unfiltered_html?
+    user = CurrentRequest.user
+    site = CurrentRequest.site
+    return false if user.blank? || site.blank?
+
+    CamaleonCms::Ability.new(user, site).can?(:manage, :contact_form_unfiltered_html)
+  end
+
+  def sanitize_unfiltered_html(settings, fields)
+    mail = settings["railscf_mail"]
+    if mail.present?
+      UNFILTERED_HTML_SETTINGS.each do |key|
+        mail[key] = CamaleonRecord.cama_sanitize_translatable(mail[key].to_s) if mail[key].present?
+      end
+    end
+
+    fields.each do |field|
+      options = field[:field_options]
+      next if options.blank? || options[:template].blank?
+
+      options[:template] = CamaleonRecord.cama_sanitize_translatable(options[:template].to_s)
+    end
+
+    [settings, fields]
+  end
 
   def set_form
     begin
