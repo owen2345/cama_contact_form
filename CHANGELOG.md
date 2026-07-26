@@ -2,6 +2,8 @@
 
 ## 0.1.10
 
+Reported by Amir Aliu and Enrik Mustafa. [#63](https://github.com/owen2345/cama_contact_form/pull/63)
+
 - **Security fix:** Escape form output. `cama_form_element_bootstrap_object` and
   `cama_form_select_multiple_bootstrap` built their markup by raw string interpolation with no
   escaping at any position, and `forms_shorcode.html.erb` emitted the result through `raw`. Two trust
