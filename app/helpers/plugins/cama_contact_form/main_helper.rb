@@ -1,7 +1,7 @@
 module Plugins::CamaContactForm::MainHelper
   include Recaptcha::Adapters::ViewMethods
   def self.included(klass)
-    klass.helper_method [:cama_form_element_bootstrap_object, :cama_form_shortcode] rescue "" # here your methods accessible from views
+    klass.helper_method [:cama_form_element_bootstrap_object, :cama_form_shortcode, :cf_h] rescue "" # here your methods accessible from views
   end
 
   def contact_form_on_export(args)
@@ -72,6 +72,30 @@ module Plugins::CamaContactForm::MainHelper
     "[forms slug=#{slug}]"
   end
 
+  # Escape a value for interpolation into the markup these helpers build by string concatenation.
+  #
+  # CGI.escapeHTML rather than ERB::Util.html_escape: the latter is a no-op on an html_safe string,
+  # which would let such a value close its own attribute. Everything escaped here is data -- a label,
+  # a class name, a visitor's submitted value -- never markup.
+  #
+  # The four markup-by-contract settings (previous_html, after_html, the field template and
+  # field_attributes) are deliberately NOT escaped: they exist to carry site markup and are sanitized
+  # when the form is saved instead.
+  def cf_h(value)
+    CGI.escapeHTML(value.to_s)
+  end
+
+  # Substitute a placeholder without letting the replacement text be reinterpreted. String#sub/#gsub
+  # treat backslash sequences in a String replacement as backreferences, so a value containing "\1"
+  # or "\\" would be mangled; the block form passes the replacement through untouched.
+  def cf_sub(subject, placeholder, replacement)
+    subject.sub(placeholder) { replacement }
+  end
+
+  def cf_gsub(subject, placeholder, replacement)
+    subject.gsub(placeholder) { replacement }
+  end
+
   # form contact with css bootstrap
   def cama_form_element_bootstrap_object(form, object, values)
     html = ""
@@ -91,24 +115,30 @@ module Plugins::CamaContactForm::MainHelper
 
       temp2 = ""
 
+      # Every interpolation below is a data position and is escaped. `custom_attrs.to_attr_format` is
+      # escaped by Camaleon's Hash extension, and the field template itself stays raw by contract.
+      current_value = cf_h(values[cid] || ob[:default_value].to_s.translate)
+      esc_f_name = cf_h(f_name)
+      esc_type = cf_h(ob[:field_type])
+
       case ob[:field_type].to_s
         when 'paragraph','textarea'
-          temp2 = "<textarea #{ob[:custom_attrs].to_attr_format} name=\"#{f_name}\" maxlength=\"#{field_options[:maxlength] || 500 }\"  class=\"#{ob[:custom_class].presence || 'form-control'}  \">#{values[cid] || ob[:default_value].to_s.translate}</textarea>"
+          temp2 = "<textarea #{ob[:custom_attrs].to_attr_format} name=\"#{esc_f_name}\" maxlength=\"#{cf_h(field_options[:maxlength] || 500)}\"  class=\"#{cf_h(ob[:custom_class].presence || 'form-control')}  \">#{current_value}</textarea>"
         when 'radio'
           temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], ob[:field_type],values)
         when 'checkboxes'
           temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], "checkbox",values)
         when 'submit'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type=\"#{ob[:field_type]}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" name=\"#{esc_f_name}\"  class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{cf_h(ob[:label])}</button>"
         when 'button'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='button' name=\"#{f_name}\" class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='button' name=\"#{esc_f_name}\" class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{cf_h(ob[:label])}</button>"
         when 'reset_button'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='reset' name=\"#{f_name}\" class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='reset' name=\"#{esc_f_name}\" class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{cf_h(ob[:label])}</button>"
         when 'text', 'website', 'email'
           class_type = ""
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="website"
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="email"
-          temp2 = "<input #{ob[:custom_attrs].to_attr_format} type=\"#{ob[:field_type]}\" value=\"#{values[cid] || ob[:default_value].to_s.translate}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'form-control'} #{class_type}\">"
+          temp2 = "<input #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" value=\"#{current_value}\" name=\"#{esc_f_name}\"  class=\"#{cf_h(ob[:custom_class].presence || 'form-control')} #{cf_h(class_type)}\">"
         when 'captcha'
           if form.recaptcha_enabled?
             temp2 = recaptcha_tags
@@ -116,14 +146,14 @@ module Plugins::CamaContactForm::MainHelper
             temp2 = cama_captcha_tag(5, {}, {class: "#{ob[:custom_class].presence || 'form-control'} field-captcha required"}.merge(ob[:custom_attrs]))
           end
         when 'file'
-          temp2 = "<input multiple=\"multiple\" type=\"file\" value=\"\" name=\"#{f_name}[]\" #{ob[:custom_attrs].to_attr_format} class=\"#{ob[:custom_class].presence || 'form-control'}\">"
+          temp2 = "<input multiple=\"multiple\" type=\"file\" value=\"\" name=\"#{esc_f_name}[]\" #{ob[:custom_attrs].to_attr_format} class=\"#{cf_h(ob[:custom_class].presence || 'form-control')}\">"
         when 'dropdown'
           temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], "select",values)
         else
       end
-      r[:template] = r[:template].sub('[ci]', temp2)
-      r[:template] = r[:template].sub('[descr ci]', field_options[:description].to_s.translate).sub('<p></p>', '')
-      html += r[:template].gsub('[label ci]', for_name)
+      r[:template] = cf_sub(r[:template], '[ci]', temp2)
+      r[:template] = cf_sub(r[:template], '[descr ci]', cf_h(field_options[:description].to_s.translate)).sub('<p></p>', '')
+      html += cf_gsub(r[:template], '[label ci]', cf_h(for_name))
     end
     html
   end
@@ -137,23 +167,31 @@ module Plugins::CamaContactForm::MainHelper
     cid = ob[:cid].to_sym
     html = ""
 
+    esc_type = cf_h(type)
+    esc_cid = cf_h(ob[:cid])
+    esc_f_name = cf_h(f_name)
+    esc_class = cf_h(ob[:custom_class])
+
     if type == "radio" || type == "checkbox"
-      other_input = (include_other_option)? "<div class=\"#{type} #{ob[:custom_class]}\"> <label for=\"#{ob[:cid]}\"><input id=\"#{ob[:cid]}-other\" type=\"#{type}\" name=\"#{title.downcase}[]\" class=\"\">Other <input type=\"text\" /></label></div>" : " "
+      other_input = (include_other_option)? "<div class=\"#{esc_type} #{esc_class}\"> <label for=\"#{esc_cid}\"><input id=\"#{esc_cid}-other\" type=\"#{esc_type}\" name=\"#{cf_h("#{title.downcase}[]")}\" class=\"\">Other <input type=\"text\" /></label></div>" : " "
     else
-      html = "<select #{ob[:custom_attrs].to_attr_format} name=\"#{f_name}\" class=\"#{ob[:custom_class]}\">"
+      html = "<select #{ob[:custom_attrs].to_attr_format} name=\"#{esc_f_name}\" class=\"#{esc_class}\">"
     end
 
     options.each do |op|
       label = op[:label].translate
+      # The option value is the label lowercased with spaces collapsed to underscores; escape the
+      # result, not the source, so the value attribute matches what is compared against `values[cid]`.
+      option_value = label.downcase.gsub(" ", "_")
       if type == "radio" || type == "checkbox"
-        html += "<div class=\"#{type} #{ob[:custom_class]}\">
-                    <label for=\"#{ob[:cid]}\">
-                      <input #{ob[:custom_attrs].to_attr_format} type=\"#{type}\" #{'checked' if op[:checked].to_s.cama_true?} name=\"#{f_name}[]\" class=\"\" value=\"#{label.downcase}\">
-                      #{label}
+        html += "<div class=\"#{esc_type} #{esc_class}\">
+                    <label for=\"#{esc_cid}\">
+                      <input #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" #{'checked' if op[:checked].to_s.cama_true?} name=\"#{esc_f_name}[]\" class=\"\" value=\"#{cf_h(option_value)}\">
+                      #{cf_h(label)}
                     </label>
                   </div>"
       else
-        html += "<option  value=\"#{label.downcase.gsub(" ", "_")}\" #{"selected" if "#{label.downcase.gsub(" ", "_")}" == values[cid] || op[:checked].to_s.cama_true? } >#{label}</option>"
+        html += "<option  value=\"#{cf_h(option_value)}\" #{"selected" if option_value == values[cid] || op[:checked].to_s.cama_true? } >#{cf_h(label)}</option>"
       end
     end
 
