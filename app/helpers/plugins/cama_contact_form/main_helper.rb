@@ -72,15 +72,27 @@ module Plugins::CamaContactForm::MainHelper
     "[forms slug=#{slug}]"
   end
 
-  # Escape a value for interpolation into the markup these helpers build by string concatenation.
+  # Escape a value for interpolation into an HTML *attribute value*.
   #
   # CGI.escapeHTML rather than ERB::Util.html_escape: the latter is a no-op on an html_safe string,
-  # which would let such a value close its own attribute. Everything escaped here is data -- a label,
-  # a class name, a visitor's submitted value -- never markup.
+  # which would let such a value close its own attribute.
   #
-  # The four markup-by-contract settings (previous_html, after_html, the field template and
-  # field_attributes) are deliberately NOT escaped: they exist to carry site markup and are sanitized
-  # when the form is saved instead.
+  # Which positions get this, and which render as markup, is decided by HTML context rather than by
+  # trust -- because the two contexts are protected by different mechanisms:
+  #
+  #   Attribute values (class="...", value="...", name="...") are ALWAYS escaped. Sanitizing cannot
+  #   protect this context: `form-control" onfocus="alert(1)` contains no tags, so an HTML sanitizer
+  #   passes it through untouched and rendering it raw injects a live event handler. There is no
+  #   markup use case for a CSS class or a prefilled input value, so nothing is lost by escaping.
+  #
+  #   Element content (labels, descriptions, option text, button text, the form wrappers and the
+  #   field template) renders as markup, and is sanitized when the form is SAVED unless the author
+  #   holds :manage, :contact_form_unfiltered_html. That is what lets a trusted author put <strong>
+  #   or a link in a field label and have guests see it rendered.
+  #
+  # One value crosses both contexts: a visitor's own submission (values[cid]). It is always escaped,
+  # in every position, with no permission able to exempt it -- unauthenticated input never passes
+  # through the save-time sanitizer.
   def cf_h(value)
     CGI.escapeHTML(value.to_s)
   end
@@ -129,11 +141,11 @@ module Plugins::CamaContactForm::MainHelper
         when 'checkboxes'
           temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], "checkbox",values)
         when 'submit'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" name=\"#{esc_f_name}\"  class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{cf_h(ob[:label])}</button>"
+          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" name=\"#{esc_f_name}\"  class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{ob[:label]}</button>"
         when 'button'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='button' name=\"#{esc_f_name}\" class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{cf_h(ob[:label])}</button>"
+          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='button' name=\"#{esc_f_name}\" class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{ob[:label]}</button>"
         when 'reset_button'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='reset' name=\"#{esc_f_name}\" class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{cf_h(ob[:label])}</button>"
+          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='reset' name=\"#{esc_f_name}\" class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{ob[:label]}</button>"
         when 'text', 'website', 'email'
           class_type = ""
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="website"
@@ -152,8 +164,8 @@ module Plugins::CamaContactForm::MainHelper
         else
       end
       r[:template] = cf_sub(r[:template], '[ci]', temp2)
-      r[:template] = cf_sub(r[:template], '[descr ci]', cf_h(field_options[:description].to_s.translate)).sub('<p></p>', '')
-      html += cf_gsub(r[:template], '[label ci]', cf_h(for_name))
+      r[:template] = cf_sub(r[:template], '[descr ci]', field_options[:description].to_s.translate).sub('<p></p>', '')
+      html += cf_gsub(r[:template], '[label ci]', for_name)
     end
     html
   end
@@ -187,11 +199,11 @@ module Plugins::CamaContactForm::MainHelper
         html += "<div class=\"#{esc_type} #{esc_class}\">
                     <label for=\"#{esc_cid}\">
                       <input #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" #{'checked' if op[:checked].to_s.cama_true?} name=\"#{esc_f_name}[]\" class=\"\" value=\"#{cf_h(option_value)}\">
-                      #{cf_h(label)}
+                      #{label}
                     </label>
                   </div>"
       else
-        html += "<option  value=\"#{cf_h(option_value)}\" #{"selected" if option_value == values[cid] || op[:checked].to_s.cama_true? } >#{cf_h(label)}</option>"
+        html += "<option  value=\"#{cf_h(option_value)}\" #{"selected" if option_value == values[cid] || op[:checked].to_s.cama_true? } >#{label}</option>"
       end
     end
 

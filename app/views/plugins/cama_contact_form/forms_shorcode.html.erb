@@ -14,8 +14,8 @@
             <%= render :partial => "camaleon_cms/flash_messages", locals:{ flash: (flash[:contact_form] || {}).with_indifferent_access } %>
             <%= raw cama_form_element_bootstrap_object(r[:form], values[:fields], values_fields) %>
             <% if values[:fields].present? && !values[:fields].delete_if{|field| field[:field_type] != 'submit' }.present? %>
-                <%# the button label is data, so it is escaped; the surrounding submit markup is not %>
-                <%= raw r[:submit].sub('[submit_label]') { cf_h(@form.the_settings[:railscf_form_button][:name_button]) } %>
+                <%# element content: rendered as markup, sanitized on save unless the author is trusted %>
+                <%= raw r[:submit].sub('[submit_label]') { @form.the_settings[:railscf_form_button][:name_button].to_s } %>
             <% end %>
             <%= raw front_editor_link(edit_admin_plugins_cama_contact_form_admin_form_url(@form.id)) rescue "" %>
         <% end %>
