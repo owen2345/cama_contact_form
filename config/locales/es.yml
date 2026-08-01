@@ -93,6 +93,11 @@ es:
           deleted: 'Formulario eliminado correctamente'
         update:
           updated_success: 'Formulario actualizado correctamente'
+          malformed_structure: 'Un campo tiene un %{field} con formato incorrecto. No se guardó nada.'
+          unfiltered_html_rejected: 'El %{field} contiene HTML que su rol no tiene permitido guardar. No se guardó nada. Elimínelo, o pida a un administrador que le conceda el permiso "Permitir HTML sin filtrar en formularios de contacto".'
+          unsafe_attribute_rejected: 'El %{field} contiene comillas dobles, que romperían el atributo HTML en el que se escribe. No se guardó nada. Elimínelas, o pida a un administrador que le conceda el permiso "Permitir HTML sin filtrar en formularios de contacto".'
+          unsafe_textarea_rejected: 'El %{field} cierra el cuadro de texto en el que se escribe. No se guardó nada. Elimine la etiqueta de cierre, o pida a un administrador que le conceda el permiso "Permitir HTML sin filtrar en formularios de contacto".'
+          unsafe_attributes_rejected: 'El %{field} contiene un atributo que su rol no tiene permitido guardar: un manejador de eventos, un estilo en línea, una URL de script o un nombre con formato incorrecto. No se guardó nada. Elimínelo, o pida a un administrador que le conceda el permiso "Permitir HTML sin filtrar en formularios de contacto".'
 
       front:
         save_form:
@@ -101,3 +106,5 @@ es:
           captch_error_val: 'Error de código de seguridad'
           success_form_val: 'Su mensaje a sido enviado satisfactoriamente. Muchas gracias!'
           error_form_val: 'A ocurrido un error, por favor intente de nuevo'
+          invalid_content_val: 'Su mensaje contiene caracteres que no están permitidos. Por favor, elimine cualquier HTML o comillas dobles e inténtelo de nuevo.'
+          invalid_request_val: 'No se pudo enviar ese formulario. Por favor, inténtelo de nuevo.'

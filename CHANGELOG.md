@@ -1,28 +1,72 @@
 # Change Log
 
-## Unreleased
+## 0.1.12
 
-Rename this heading to the version being shipped before cutting the release — the release workflow
-copies the `## <version>` section into the GitHub release body.
+Two independent changes ship together. Each section links its PR — the reasoning, the exploits and
+the measurements are there, not here.
 
-Packaging fixes, all user-visible on the next release.
+### Security: form content is refused, not rewritten
+
+[#65](https://github.com/owen2345/cama_contact_form/pull/65) · pairs with
+[camaleon-cms#1215](https://github.com/owen2345/camaleon-cms/pull/1215), which supplies the
+`contact_form_unfiltered_html` permission and hosts this plugin's test suite. Reported by Amir Aliu
+and Enrik Mustafa. **Supersedes 0.1.10 and 0.1.11**, which both rewrote the author's input; neither
+reached RubyGems.
+
+A form's content is stored and delivered exactly as written, or the save is refused and the author is
+told which setting to fix. Nothing the plugin stores or renders into a form is escaped or sanitized.
+Escaping is not idempotent — a re-saved value grows another layer of entity references every pass —
+and sanitizing discards the author's work without saying so. Refusing avoids both, and buys the
+property that makes verbatim rendering safe: stored content always equals authored content.
+
+- **Every gated position is checked against the context it actually renders in**, and the context is
+  now fixed rather than inferred — a `template` may no longer place a placeholder inside a tag, so it
+  cannot relocate a value into an attribute the gate is not judging it against.
+- **The markup test is structural as well as differential**: a value may not leave a tag open, and
+  every tag it writes must survive parsing. The sanitizer comparison alone was blind to both.
+- **Also refused:** an event-handler attribute name, an entity-encoded script URL
+  (`formaction="javascript&colon;…"`), `rel="opener"`, and a visitor's value carrying active markup
+  into the notification e-mail, which renders with `raw`.
+- **Fixed for everyone:** checkbox, radio and file submissions were all being refused; six crashes
+  reachable from an ordinary request, one an unauthenticated 500; ordinary prose was refused
+  (`Tom & Jerry`, a translated `5 < 10`, `-->`, `data-*`/`aria-*`/`role`); and the gate's cost was
+  chosen by the caller — 4093 option labels measured 17 s of CPU in a single request.
+
+**Breaking changes**
+
+- A save that previously succeeded may now be refused. The message names the setting, never the
+  content it refused.
+- **Some refusals bind every author, administrators included**, because they describe records the
+  renderer cannot read rather than content a role may not write: a placeholder inside a tag in a
+  `template`; a radio, checkbox or dropdown field with no options; a non-scalar `required`;
+  `field_attributes` that is valid JSON but not an object; and caps of 200 fields, 100 options per
+  field, and 64 KB per gated value. Each of these previously saved successfully and then raised on
+  every visit to the public page.
+- `rel` and `target` are no longer accepted in authored markup.
+- Radio and checkbox `value=` is restored to the 0.1.8 wire format — the plain lowercased label. An
+  earlier refactor had switched it to the underscore form used by dropdowns, which no existing
+  response row would match.
+- **Requires** the Camaleon CMS release supplying `contact_form_unfiltered_html` (on `master` after
+  2.9.2). On an older version the plugin still refuses unsafe content, but only administrators are
+  trusted.
+
+### Packaging
+
 [#66](https://github.com/owen2345/cama_contact_form/pull/66)
 
 - **The gem no longer ships its own test suite.** `s.test_files` was set to `Dir["test/**/*"]`, and
   RubyGems merges `test_files` into `files`, so the whole `test/` tree was published despite
   `s.files` listing only `{app,config,db,lib}`. The package drops from 62 files to 26.
-- **The README is now included.** `s.files` referenced `README.rdoc`, a file that does not exist in
-  this repository — `Dir[]` matched nothing and said nothing, so every release so far shipped
-  without a README. The same stale name is fixed in the `Rakefile` rdoc task.
-- **`required_ruby_version` is now declared as `>= 3.0`**, matching camaleon_cms. Bundler will stop
-  offering new versions of this gem to projects on an older Ruby, rather than installing a gem that
-  cannot run.
-- **A homepage is set**, so the gem page on RubyGems links back to this repository.
+- **The README is now included.** `s.files` referenced `README.rdoc`, which does not exist here, so
+  every release so far shipped without one. The same stale name is fixed in the `Rakefile` rdoc task.
+- **`required_ruby_version` is declared as `>= 3.0`**, matching camaleon_cms, so Bundler stops
+  offering this gem to projects on an older Ruby.
+- **A homepage is set**, so the RubyGems page links back to this repository.
 
-Releases are also cut differently now: the reusable action that derived the version from the newest
-git tag is replaced by a manually started workflow that treats `lib/cama_contact_form/version.rb`
-as the single source of truth, and publishes to RubyGems. See *Releasing* in the README. This does
-not affect the released gem.
+Releases are also cut differently: the reusable action that derived the version from the newest git
+tag is replaced by a manually started workflow that treats `lib/cama_contact_form/version.rb` as the
+single source of truth, and publishes to RubyGems. See *Releasing* in the README. This does not
+affect the released gem.
 
 ## 0.1.11
 
@@ -52,6 +96,13 @@ Escaping is now decided by **HTML context** rather than applied uniformly:
 **Not covered:** markup in a *dropdown* option label still will not render. `<option>` is text-only
 per the HTML specification, so a browser discards any element inside it regardless of what the server
 emits. Radio and checkbox option labels render inside a `<label>` and are unaffected.
+
+> **Correction, added in 0.1.12:** the paragraph above is wrong, and was wrong when it was written.
+> `<option>` is not text-only — `<script>` inside one survives parsing and executes, and `<template>`
+> survives as well; only ordinary formatting elements are dropped. Nothing about a dropdown option
+> label may be relied on as inert, so 0.1.12 gates that position like every other
+> ([#65](https://github.com/owen2345/cama_contact_form/pull/65)). Formatting markup in a dropdown
+> option label still will not render, but that is a display limitation, not a security boundary.
 
 **Behavior change from 0.1.10:** field labels, descriptions, option labels and the submit button
 label render as markup again. If you upgraded to 0.1.10 and saw markup in those fields turn into

@@ -13,3 +13,5 @@ gemspec
 # To use a debugger
 # gem 'byebug', group: [:development, :test]
 
+gem 'sprockets-rails', '>= 3.5.2'
+gem 'camaleon_cms'

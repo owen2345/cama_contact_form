@@ -1,7 +1,7 @@
 module Plugins::CamaContactForm::MainHelper
   include Recaptcha::Adapters::ViewMethods
   def self.included(klass)
-    klass.helper_method [:cama_form_element_bootstrap_object, :cama_form_shortcode, :cf_h] rescue "" # here your methods accessible from views
+    klass.helper_method [:cama_form_element_bootstrap_object, :cama_form_shortcode] rescue "" # here your methods accessible from views
   end
 
   def contact_form_on_export(args)
@@ -72,40 +72,53 @@ module Plugins::CamaContactForm::MainHelper
     "[forms slug=#{slug}]"
   end
 
-  # Escape a value for interpolation into an HTML *attribute value*.
+  # Nothing in this file escapes anything, by design. Every value it interpolates -- an author's
+  # labels, descriptions, classes, default values, wrappers and templates, a visitor's redisplayed
+  # submission, and the structural identifiers the form builder generates -- reaches the page
+  # VERBATIM.
   #
-  # CGI.escapeHTML rather than ERB::Util.html_escape: the latter is a no-op on an html_safe string,
-  # which would let such a value close its own attribute.
+  # That is safe because it is enforced at the gate rather than at the sink. The admin controller
+  # refuses to store content an untrusted author may not write, and refuses structurally malformed
+  # values from anyone; the front controller refuses a submission carrying anything malign and
+  # echoes it back not at all. Stored content therefore always equals written content, so rendering
+  # it verbatim introduces nothing the writer did not put there -- and an author holding
+  # :manage, :contact_form_unfiltered_html can put markup, or script, anywhere in a form and have
+  # guests receive it exactly as written.
   #
-  # Which positions get this, and which render as markup, is decided by HTML context rather than by
-  # trust -- because the two contexts are protected by different mechanisms:
+  # Emit a field's custom attributes verbatim.
   #
-  #   Attribute values (class="...", value="...", name="...") are ALWAYS escaped. Sanitizing cannot
-  #   protect this context: `form-control" onfocus="alert(1)` contains no tags, so an HTML sanitizer
-  #   passes it through untouched and rendering it raw injects a live event handler. There is no
-  #   markup use case for a CSS class or a prefilled input value, so nothing is lost by escaping.
-  #
-  #   Element content (labels, descriptions, option text, button text, the form wrappers and the
-  #   field template) renders as markup, and is sanitized when the form is SAVED unless the author
-  #   holds :manage, :contact_form_unfiltered_html. That is what lets a trusted author put <strong>
-  #   or a link in a field label and have guests see it rendered.
-  #
-  # One value crosses both contexts: a visitor's own submission (values[cid]). It is always escaped,
-  # in every position, with no permission able to exempt it -- unauthenticated input never passes
-  # through the save-time sanitizer.
-  def cf_h(value)
-    CGI.escapeHTML(value.to_s)
+  # Camaleon's Hash#to_attr_format is deliberately NOT used here. That method escapes values and
+  # drops keys that are not valid attribute names, which is exactly right for its other callers --
+  # plugins and themes handing it data from who-knows-where -- but wrong for this one.
+  # field_attributes is authored content: it is validated when the form is saved, and an author
+  # holding the unfiltered-HTML grant is entitled to emit an event handler through it.
+  def cf_attrs(attrs)
+    (attrs || {}).map { |key, value| "#{key} = \"#{value}\"" }.join(' ')
   end
 
-  # Substitute a placeholder without letting the replacement text be reinterpreted. String#sub/#gsub
-  # treat backslash sequences in a String replacement as backreferences, so a value containing "\1"
-  # or "\\" would be mangled; the block form passes the replacement through untouched.
-  def cf_sub(subject, placeholder, replacement)
-    subject.sub(placeholder) { replacement }
-  end
+  # Substitute every placeholder in ONE pass, so no replacement is ever scanned for the next
+  # placeholder. Substituting in sequence meant `[label ci]` was searched for in the field markup
+  # `[ci]` had just produced -- so a visitor typing the literal `[label ci]` into a message had the
+  # author's label spliced into the middle of the textarea that was echoing it back.
+  #
+  # `[ci]` and `[descr ci]` keep first-occurrence semantics and `[label ci]` all-occurrence, which is
+  # what the three separate sub/sub/gsub calls did.
+  #
+  # The block form of #gsub is used throughout: a String replacement would treat `\1` or `\\` in the
+  # value as a backreference and silently mangle it.
+  CF_PLACEHOLDER = /\[(?:ci|label ci|descr ci)\]/
+  CF_REPEATABLE_PLACEHOLDERS = ['[label ci]'].freeze
 
-  def cf_gsub(subject, placeholder, replacement)
-    subject.gsub(placeholder) { replacement }
+  def cf_substitute(template, replacements)
+    seen = Hash.new(0)
+    template.to_s.gsub(CF_PLACEHOLDER) do |placeholder|
+      seen[placeholder] += 1
+      if seen[placeholder] == 1 || CF_REPEATABLE_PLACEHOLDERS.include?(placeholder)
+        replacements.fetch(placeholder, placeholder)
+      else
+        placeholder
+      end
+    end
   end
 
   # form contact with css bootstrap
@@ -119,7 +132,9 @@ module Plugins::CamaContactForm::MainHelper
       ob = r[:field]
       ob[:custom_class] = r[:custom_class]
       ob[:custom_attrs] = r[:custom_attrs]
-      ob[:custom_attrs][:required] = 'true' if ob[:required].present? && ob[:required].to_bool
+      # `cama_true?`, not `to_bool`: `to_bool` raises ArgumentError on anything outside its two
+      # patterns, so a stored `required` of `maybe` was a 500 on every visit to the page.
+      ob[:custom_attrs][:required] = 'true' if ob[:required].to_s.cama_true?
       field_options = ob[:field_options]
       for_name = ob[:label].to_s
       f_name = "fields[#{ob[:cid]}]"
@@ -127,51 +142,64 @@ module Plugins::CamaContactForm::MainHelper
 
       temp2 = ""
 
-      # Every interpolation below is a data position and is escaped. `custom_attrs.to_attr_format` is
-      # escaped by Camaleon's Hash extension, and the field template itself stays raw by contract.
-      current_value = cf_h(values[cid] || ob[:default_value].to_s.translate)
-      esc_f_name = cf_h(f_name)
-      esc_type = cf_h(ob[:field_type])
+      # Both a redisplayed submission and the author's default_value render verbatim: each was
+      # validated before it could be stored or stashed, so neither can carry anything the submitter
+      # was not permitted to write.
+      current_value = values[cid] || ob[:default_value].to_s.translate
 
       case ob[:field_type].to_s
         when 'paragraph','textarea'
-          temp2 = "<textarea #{ob[:custom_attrs].to_attr_format} name=\"#{esc_f_name}\" maxlength=\"#{cf_h(field_options[:maxlength] || 500)}\"  class=\"#{cf_h(ob[:custom_class].presence || 'form-control')}  \">#{current_value}</textarea>"
+          temp2 = "<textarea #{cf_attrs(ob[:custom_attrs])} name=\"#{f_name}\" maxlength=\"#{field_options[:maxlength] || 500}\"  class=\"#{ob[:custom_class].presence || 'form-control'}  \">#{current_value}</textarea>"
         when 'radio'
           temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], ob[:field_type],values)
         when 'checkboxes'
           temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], "checkbox",values)
         when 'submit'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" name=\"#{esc_f_name}\"  class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{ob[:label]}</button>"
+          temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type=\"#{ob[:field_type]}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
         when 'button'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='button' name=\"#{esc_f_name}\" class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{ob[:label]}</button>"
+          temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type='button' name=\"#{f_name}\" class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
         when 'reset_button'
-          temp2 = "<button #{ob[:custom_attrs].to_attr_format} type='reset' name=\"#{esc_f_name}\" class=\"#{cf_h(ob[:custom_class].presence || 'btn btn-default')}\">#{ob[:label]}</button>"
+          temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type='reset' name=\"#{f_name}\" class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
         when 'text', 'website', 'email'
           class_type = ""
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="website"
           class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="email"
-          temp2 = "<input #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" value=\"#{current_value}\" name=\"#{esc_f_name}\"  class=\"#{cf_h(ob[:custom_class].presence || 'form-control')} #{cf_h(class_type)}\">"
+          temp2 = "<input #{cf_attrs(ob[:custom_attrs])} type=\"#{ob[:field_type]}\" value=\"#{current_value}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'form-control'} #{class_type}\">"
         when 'captcha'
           if form.recaptcha_enabled?
             temp2 = recaptcha_tags
           else
+            # The one field type whose attributes do not go through cf_attrs: cama_captcha_tag builds
+            # its markup with Rails' `tag`, which escapes values and rewrites malformed names. That is
+            # a documented exception to this file's verbatim contract rather than a gap in it -- `tag`
+            # is the stricter of the two, so a trusted author's quoted value is escaped here and a
+            # malformed attribute name is mangled rather than emitted. Left as it is deliberately:
+            # reproducing cf_attrs would mean rebuilding the helper's output by string surgery, which
+            # is a real risk of breaking the captcha for a consistency gain and no security gain.
             temp2 = cama_captcha_tag(5, {}, {class: "#{ob[:custom_class].presence || 'form-control'} field-captcha required"}.merge(ob[:custom_attrs]))
           end
         when 'file'
-          temp2 = "<input multiple=\"multiple\" type=\"file\" value=\"\" name=\"#{esc_f_name}[]\" #{ob[:custom_attrs].to_attr_format} class=\"#{cf_h(ob[:custom_class].presence || 'form-control')}\">"
+          temp2 = "<input multiple=\"multiple\" type=\"file\" value=\"\" name=\"#{f_name}[]\" #{cf_attrs(ob[:custom_attrs])} class=\"#{ob[:custom_class].presence || 'form-control'}\">"
         when 'dropdown'
           temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], "select",values)
         else
       end
-      r[:template] = cf_sub(r[:template], '[ci]', temp2)
-      r[:template] = cf_sub(r[:template], '[descr ci]', field_options[:description].to_s.translate).sub('<p></p>', '')
-      html += cf_gsub(r[:template], '[label ci]', for_name)
+      r[:template] = cf_substitute(r[:template],
+                                   '[ci]' => temp2,
+                                   '[descr ci]' => field_options[:description].to_s.translate,
+                                   '[label ci]' => for_name).sub('<p></p>', '')
+      html += r[:template]
     end
     html
   end
 
   def cama_form_select_multiple_bootstrap(ob, title, type, values)
-    options = ob[:field_options][:options]
+    # Defensive, because a form saved before the gate required a well-formed option list carries
+    # whatever it carries -- and `nil.each`, or `op[:label]` on a String, is a 500 on every visit to
+    # the page. `Array()` alone will not do: on a Hash it yields key/value pairs.
+    raw_options = ob[:field_options][:options]
+    options = (raw_options.is_a?(Hash) ? raw_options.values : Array(raw_options))
+              .select { |op| op.is_a?(Hash) }
     include_other_option = ob[:field_options][:include_other_option]
     other_input = ""
 
@@ -179,31 +207,30 @@ module Plugins::CamaContactForm::MainHelper
     cid = ob[:cid].to_sym
     html = ""
 
-    esc_type = cf_h(type)
-    esc_cid = cf_h(ob[:cid])
-    esc_f_name = cf_h(f_name)
-    esc_class = cf_h(ob[:custom_class])
+    custom_class = ob[:custom_class].to_s
 
     if type == "radio" || type == "checkbox"
-      other_input = (include_other_option)? "<div class=\"#{esc_type} #{esc_class}\"> <label for=\"#{esc_cid}\"><input id=\"#{esc_cid}-other\" type=\"#{esc_type}\" name=\"#{cf_h("#{title.downcase}[]")}\" class=\"\">Other <input type=\"text\" /></label></div>" : " "
+      other_input = (include_other_option)? "<div class=\"#{type} #{custom_class}\"> <label for=\"#{ob[:cid]}\"><input id=\"#{ob[:cid]}-other\" type=\"#{type}\" name=\"#{title.downcase}[]\" class=\"\">Other <input type=\"text\" /></label></div>" : " "
     else
-      html = "<select #{ob[:custom_attrs].to_attr_format} name=\"#{esc_f_name}\" class=\"#{esc_class}\">"
+      html = "<select #{cf_attrs(ob[:custom_attrs])} name=\"#{f_name}\" class=\"#{custom_class}\">"
     end
 
     options.each do |op|
-      label = op[:label].translate
-      # The option value is the label lowercased with spaces collapsed to underscores; escape the
-      # result, not the source, so the value attribute matches what is compared against `values[cid]`.
-      option_value = label.downcase.gsub(" ", "_")
+      label = op[:label].to_s.translate
       if type == "radio" || type == "checkbox"
-        html += "<div class=\"#{esc_type} #{esc_class}\">
-                    <label for=\"#{esc_cid}\">
-                      <input #{ob[:custom_attrs].to_attr_format} type=\"#{esc_type}\" #{'checked' if op[:checked].to_s.cama_true?} name=\"#{esc_f_name}[]\" class=\"\" value=\"#{cf_h(option_value)}\">
+        html += "<div class=\"#{type} #{custom_class}\">
+                    <label for=\"#{ob[:cid]}\">
+                      <input #{cf_attrs(ob[:custom_attrs])} type=\"#{type}\" #{'checked' if op[:checked].to_s.cama_true?} name=\"#{f_name}[]\" class=\"\" value=\"#{label.downcase}\">
                       #{label}
                     </label>
                   </div>"
       else
-        html += "<option  value=\"#{cf_h(option_value)}\" #{"selected" if option_value == values[cid] || op[:checked].to_s.cama_true? } >#{label}</option>"
+        # A dropdown submits the label lowercased with spaces collapsed to underscores. Derived once
+        # so the emitted value and the `selected` comparison cannot drift apart -- but only here:
+        # radio and checkbox have always submitted the plain lowercased label, and unifying the two
+        # would silently change what every existing response row is compared against.
+        option_value = label.downcase.gsub(" ", "_")
+        html += "<option  value=\"#{option_value}\" #{"selected" if option_value == values[cid] || op[:checked].to_s.cama_true? } >#{label}</option>"
       end
     end
 
