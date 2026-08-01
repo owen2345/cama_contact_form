@@ -21,6 +21,10 @@ No tests run here — the suite that covers this plugin lives in the
 `lib/cama_contact_form/version.rb` is the single source of truth for the version. The tag, the
 published gem and the GitHub release all derive from it, so they cannot disagree.
 
+> **`0.1.12` below is only an example.** Every command, filename and heading in this section uses it
+> as a stand-in for the version you are actually releasing — substitute yours as you go. This
+> document is not updated each release, so do not expect the number here to be the next one.
+
 ### Before you start
 
 - You need **write access** to this repository.
@@ -80,8 +84,9 @@ Merging does **not** publish anything. Once the PR is merged:
 4. On the right-hand side of the blue banner, click the **Run workflow** dropdown button.
 5. Leave **Use workflow from** as `Branch: master`. The workflow refuses to run from any other
    branch, so a gem can never be published from unmerged code.
-6. In **Version to release**, type the version exactly as it appears in `version.rb` — `0.1.12`.
-   A leading `v` is accepted and stripped.
+6. In **Version to release**, type the version exactly as it appears in `version.rb` — not the
+   `0.1.12` of this example. A leading `v` is accepted and stripped, and a mismatch fails the run
+   before anything is published.
 7. Click the green **Run workflow** button.
 
 The page takes a few seconds to show the new run; reload if it does not appear. Click into the run
@@ -129,6 +134,9 @@ fallback below.
 Use this if Actions is down, if the workflow is broken, or to finish a release that failed after
 the gem was already pushed. It needs your own RubyGems credentials, and you must be an owner of the
 gem on RubyGems.
+
+As above, **`0.1.12` is a stand-in for the version you are releasing** — every command below needs
+your own number substituted in, including the `.gem` filenames.
 
 Sign in to RubyGems once per machine — this writes a token to `~/.gem/credentials`:
 
