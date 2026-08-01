@@ -41,15 +41,20 @@ jobs:
           fetch-depth: 0 # tags and full history, for the duplicate-tag check and changelog fallback
           persist-credentials: false
 
-      # `rubygems: latest` is load-bearing, not hygiene. The RubyGems bundled with the runner's
-      # Ruby still warns about open-ended dependencies (rails, recaptcha, sqlite3) and --strict
-      # promotes that to an error, so the build cannot succeed without it. RubyGems 4 dropped that
-      # validation while still rejecting a missing homepage or required_ruby_version, which is what
-      # --strict is here to catch.
+      # This pin is load-bearing, not hygiene. The RubyGems bundled with the runner's Ruby still
+      # warns about open-ended dependencies (rails, recaptcha, sqlite3), and --strict promotes that
+      # to an error, so the build cannot succeed without it. RubyGems 4 dropped that validation
+      # while still rejecting a missing homepage or required_ruby_version, which is what --strict is
+      # here to catch.
+      #
+      # Pinned rather than `latest` because --strict is a hard gate whose behaviour is decided by
+      # the RubyGems version: a floating version lets a RubyGems release fail a gem release nobody
+      # touched. setup-ruby treats this as a floor — if the runner's own default ever exceeds it,
+      # that default is used instead — so raise it deliberately, and re-check --strict when you do.
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: .tool-versions
-          rubygems: latest
+          rubygems: 4.0.17
 
       # Everything that can invalidate the release is checked here, before anything is published.
       - name: Verify the release is publishable
@@ -222,15 +227,20 @@ jobs:
         with:
           persist-credentials: false # only here so .tool-versions pins the Ruby used to push
 
-      # `rubygems: latest` is load-bearing, not hygiene. The RubyGems bundled with the runner's
-      # Ruby still warns about open-ended dependencies (rails, recaptcha, sqlite3) and --strict
-      # promotes that to an error, so the build cannot succeed without it. RubyGems 4 dropped that
-      # validation while still rejecting a missing homepage or required_ruby_version, which is what
-      # --strict is here to catch.
+      # This pin is load-bearing, not hygiene. The RubyGems bundled with the runner's Ruby still
+      # warns about open-ended dependencies (rails, recaptcha, sqlite3), and --strict promotes that
+      # to an error, so the build cannot succeed without it. RubyGems 4 dropped that validation
+      # while still rejecting a missing homepage or required_ruby_version, which is what --strict is
+      # here to catch.
+      #
+      # Pinned rather than `latest` because --strict is a hard gate whose behaviour is decided by
+      # the RubyGems version: a floating version lets a RubyGems release fail a gem release nobody
+      # touched. setup-ruby treats this as a floor — if the runner's own default ever exceeds it,
+      # that default is used instead — so raise it deliberately, and re-check --strict when you do.
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: .tool-versions
-          rubygems: latest
+          rubygems: 4.0.17
 
       - uses: actions/download-artifact@v8
         with:
