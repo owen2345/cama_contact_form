@@ -2,9 +2,12 @@
    @form =  attributes['slug'] == '__first__' ? current_site.contact_forms.first : current_site.contact_forms.where({slug: attributes['slug']}).first
    if @form.present?
      @form.set_captcha_settings!
-     values_fields =  (flash[:values].present?)? flash[:values].to_sym : {}
+     # Only the form the values were judged safe for -- see FrontController#save_form.
+     values_fields = (flash[:values].present? && flash[:values_form_id].to_s == @form.id.to_s) ? flash[:values].to_sym : {}
      values = JSON.parse(@form.value).to_sym
-     r = {form: @form, form_class: "railscf-form railscf-form-group", before_form: @form.the_settings[:railscf_mail][:previous_html].to_s, after_form: @form.the_settings[:railscf_mail][:after_html].to_s, submit: "<div class='form-group'><button class='submit_btn btn btn-default pull-right' type='submit'>[submit_label]</button></div>"}
+     # `mail_settings`/`form_button_settings`, not `the_settings[...]`: a form that has never been
+     # saved, or one saved without these containers, otherwise raised NoMethodError on every visit.
+     r = {form: @form, form_class: "railscf-form railscf-form-group", before_form: @form.mail_settings[:previous_html].to_s, after_form: @form.mail_settings[:after_html].to_s, submit: "<div class='form-group'><button class='submit_btn btn btn-default pull-right' type='submit'>[submit_label]</button></div>"}
      hooks_run("contact_form_render", r)
 %>
     <section>
@@ -14,8 +17,8 @@
             <%= render :partial => "camaleon_cms/flash_messages", locals:{ flash: (flash[:contact_form] || {}).with_indifferent_access } %>
             <%= raw cama_form_element_bootstrap_object(r[:form], values[:fields], values_fields) %>
             <% if values[:fields].present? && !values[:fields].delete_if{|field| field[:field_type] != 'submit' }.present? %>
-                <%# element content: rendered as markup, sanitized on save unless the author is trusted %>
-                <%= raw r[:submit].sub('[submit_label]') { @form.the_settings[:railscf_form_button][:name_button].to_s } %>
+                <%# element content: rendered as markup, refused on save unless the author is trusted %>
+                <%= raw r[:submit].sub('[submit_label]') { @form.form_button_settings[:name_button].to_s } %>
             <% end %>
             <%= raw front_editor_link(edit_admin_plugins_cama_contact_form_admin_form_url(@form.id)) rescue "" %>
         <% end %>

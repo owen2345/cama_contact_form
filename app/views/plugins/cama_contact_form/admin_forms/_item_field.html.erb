@@ -31,7 +31,14 @@
             <%= text_area_tag "fields[#{cid}][field_options][description]", field[:field_options][:description], class: 'form-control translatable' %>
         </div>
         <% case field[:field_type] %>
-            <% when 'checkboxes', 'radio', 'select', 'dropdown'; options = (field[:field_options][:options] || []) %>
+            <%# A refused save redraws this editor from the params the author submitted, which is the %>
+            <%# whole point -- but those params are exactly the ones that failed validation, so an   %>
+            <%# option here may be a bare string or the list may be a hash. Coerced rather than      %>
+            <%# assumed, or the refusal message is replaced by a 500.                                %>
+            <% when 'checkboxes', 'radio', 'select', 'dropdown'
+                 raw_options = field[:field_options][:options]
+                 raw_options = raw_options.values if raw_options.is_a?(Hash)
+                 options = Array(raw_options).map { |o| o.is_a?(Hash) ? o : { label: o.to_s, checked: false } } %>
                 <label><%= t('.options', default: 'Options') %></label>
                 <ul class="options_sortable" data-options-count="<%= options.size %>">
                     <% options.unshift({label: '', checked: false}).each_with_index do |option, index| %>

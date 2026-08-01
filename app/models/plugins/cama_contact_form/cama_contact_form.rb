@@ -16,16 +16,32 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
 
   # [{"label":"Untitled","field_type":"text","required":true,"field_options":{"size":"large","field_class":"Default"},"cid":"c2"},{"label":"Untitled","field_type":"paragraph","required":true,"field_options":{"size":"large","field_class":"Default"},"cid":"c6"},{"label":"Untitled","field_type":"captcha","required":true,"field_options":{"field_class":"Default"},"cid":"c10"},{"label":"Untitled","field_type":"checkboxes","required":true,"field_options":{"options":[{"label":"Default","checked":false},{"label":"Default","checked":false}],"field_class":"Default","description":"description\n"},"cid":"c12"}]
   def fields
-    @_the_fields ||= JSON.parse(self.value || '{fields: []}').with_indifferent_access
-    @_the_fields[:fields]
+    @_the_fields ||= JSON.parse(self.value || '{"fields": []}').with_indifferent_access
+    Array(@_the_fields[:fields])
   end
 
   def the_settings
     @_the_settings ||= JSON.parse(self.settings || '{}').with_indifferent_access
   end
 
+  # The three settings containers, always readable. A form that has never been saved carries
+  # `settings` of `{}`, and a partial update can leave any of them unset -- so every caller in the
+  # admin views guards its read with `rescue ''`, while the ones that do not (the public shortcode,
+  # the mailer) raised NoMethodError on every request until someone edited the database by hand.
+  def mail_settings
+    settings_hash(:railscf_mail)
+  end
+
+  def form_button_settings
+    settings_hash(:railscf_form_button)
+  end
+
+  def message_settings
+    settings_hash(:railscf_message)
+  end
+
   def the_message(key, default)
-    r = self.the_settings[:railscf_message][key].to_s.translate
+    r = message_settings[key].to_s.translate
     r.present? ? r : default
   end
 
@@ -50,6 +66,12 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   end
 
   private
+
+  def settings_hash(key)
+    value = the_settings[key]
+    value.is_a?(Hash) ? value : {}.with_indifferent_access
+  end
+
   def before_validating
     slug = self.slug
     slug = self.name if slug.blank?
