@@ -47,9 +47,13 @@ end
 ```
 
 Then add a matching section at the top of `CHANGELOG.md`, directly under the `# Change Log`
-heading. **The heading must be exactly `## 0.1.12`** — the workflow copies everything between that
-heading and the next `## ` into the GitHub release body, so an inexact heading silently costs you
-your release notes:
+heading. If an `## Unreleased` section is already sitting there, rename it to the version you are
+shipping and fold your notes into it rather than adding a second section.
+
+**The heading must be exactly `## 0.1.12`** — the workflow copies everything between that heading
+and the next `## ` into the GitHub release body, so an inexact heading (`## v0.1.12`,
+`## 0.1.12 (2026-08-01)`, or a leftover `## Unreleased`) silently costs you your release notes and
+falls back to a bare commit list:
 
 ```markdown
 ## 0.1.12
