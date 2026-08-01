@@ -1,5 +1,29 @@
 # Change Log
 
+## Unreleased
+
+Rename this heading to the version being shipped before cutting the release — the release workflow
+copies the `## <version>` section into the GitHub release body.
+
+Packaging fixes, all user-visible on the next release.
+[#66](https://github.com/owen2345/cama_contact_form/pull/66)
+
+- **The gem no longer ships its own test suite.** `s.test_files` was set to `Dir["test/**/*"]`, and
+  RubyGems merges `test_files` into `files`, so the whole `test/` tree was published despite
+  `s.files` listing only `{app,config,db,lib}`. The package drops from 62 files to 26.
+- **The README is now included.** `s.files` referenced `README.rdoc`, a file that does not exist in
+  this repository — `Dir[]` matched nothing and said nothing, so every release so far shipped
+  without a README. The same stale name is fixed in the `Rakefile` rdoc task.
+- **`required_ruby_version` is now declared as `>= 3.0`**, matching camaleon_cms. Bundler will stop
+  offering new versions of this gem to projects on an older Ruby, rather than installing a gem that
+  cannot run.
+- **A homepage is set**, so the gem page on RubyGems links back to this repository.
+
+Releases are also cut differently now: the reusable action that derived the version from the newest
+git tag is replaced by a manually started workflow that treats `lib/cama_contact_form/version.rb`
+as the single source of truth, and publishes to RubyGems. See *Releasing* in the README. This does
+not affect the released gem.
+
 ## 0.1.11
 
 Narrows the escaping introduced in 0.1.10, which was over-broad. **Supersedes 0.1.10 — upgrade
