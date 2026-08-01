@@ -52,7 +52,8 @@ property that makes verbatim rendering safe: stored content always equals author
 
 ### Packaging
 
-[#66](https://github.com/owen2345/cama_contact_form/pull/66)
+[#66](https://github.com/owen2345/cama_contact_form/pull/66) ·
+[#67](https://github.com/owen2345/cama_contact_form/pull/67)
 
 - **The gem no longer ships its own test suite.** `s.test_files` was set to `Dir["test/**/*"]`, and
   RubyGems merges `test_files` into `files`, so the whole `test/` tree was published despite
