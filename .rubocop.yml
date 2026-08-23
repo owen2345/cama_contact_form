@@ -1,0 +1,138 @@
+plugins:
+  - rubocop-capybara
+  - rubocop-factory_bot
+  - rubocop-performance
+  - rubocop-rails
+  - rubocop-rake
+  - rubocop-rspec
+  - rubocop-rspec_rails
+
+AllCops:
+  Exclude:
+    - bin/**/* # Exclude executable scripts
+    - db/**/*
+    - spec/dummy/**/* # Generated camaleon_cms-backed dummy app (incl. the copied default theme)
+    - /**/vendor/**/* # Exclude downloaded gem code in CI
+  NewCops: disable
+  SuggestExtensions: false
+  TargetRailsVersion: 6.1
+  TargetRubyVersion: 3.0 # matches the gemspec's required_ruby_version
+
+# --- Deliberate relaxations for the legacy plugin code -------------------------------------------
+# cama_contact_form predates RuboCop. The cops below flag size/complexity and convention issues
+# whose "fixes" would refactor or restructure security-sensitive request/mail/upload code with no
+# behaviour change to show for it. They are disabled on purpose (not grandfathered in a _todo file)
+# to preserve functionality and the plugin's public class names; the code is cleaned incrementally
+# as the security fixes touch it.
+
+# Size/complexity: the form-handling methods branch over many field types, validations and mail
+# paths and are long by nature. Refactoring them is out of scope for a lint pass.
+Metrics/AbcSize:
+  Enabled: false
+Metrics/BlockLength:
+  Enabled: false
+Metrics/BlockNesting:
+  Enabled: false
+Metrics/ClassLength:
+  Enabled: false
+Metrics/CyclomaticComplexity:
+  Enabled: false
+Metrics/MethodLength:
+  Enabled: false
+Metrics/ModuleLength:
+  Enabled: false
+Metrics/PerceivedComplexity:
+  Enabled: false
+
+# The plugin namespaces with compact class names (Plugins::CamaContactForm::X), matching Camaleon's
+# plugin layout; nesting them would be a risky restructure of the public constants.
+Style/ClassAndModuleChildren:
+  Enabled: false
+
+# The plugin's format/i18n strings use template tokens (%{foo}); keep that style rather than convert.
+Style/FormatStringToken:
+  EnforcedStyle: template
+
+# The model intentionally subclasses ActiveRecord::Base, not the host app's ApplicationRecord, to
+# avoid coupling to whatever the host adds there.
+Rails/ApplicationRecord:
+  Enabled: false
+
+# A cross-gem `belongs_to :site` (CamaleonCms::Site); the inverse lives in the host, so pinning
+# inverse_of here would guess at the host's association name.
+Rails/InverseOf:
+  Enabled: false
+
+# `Time.now` stamps a response identifier only, which is not timezone-sensitive.
+Rails/TimeZone:
+  Enabled: false
+
+# `ob` is the plugin's legacy name for the form-field object, used throughout the render helpers;
+# renaming ~15 references carries more risk than the short name. Merged with RuboCop's default list.
+Naming/MethodParameterName:
+  AllowedNames:
+    - ob
+  inherit_mode:
+    merge:
+      - AllowedNames
+# ------------------------------------------------------------------------------------------------
+
+Layout/MultilineMethodCallIndentation:
+  Enabled: true
+  EnforcedStyle: aligned
+
+Lint/MissingSuper:
+  Enabled: false
+
+Rails/Delegate:
+  Enabled: false
+
+RSpec/AnyInstance:
+  Enabled: false
+
+RSpec/BeEql:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/InstanceVariable:
+  Enabled: false
+
+RSpec/MessageSpies:
+  Enabled: true
+  EnforcedStyle: receive
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/NestedGroups:
+  Enabled: true
+  Max: 5
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/SpecFilePathSuffix:
+  Enabled: true
+
+Security/MarshalLoad:
+  Exclude:
+    - spec/**/*
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/MixinUsage:
+  Exclude:
+    - spec/**/*
+
+Style/NumericPredicate:
+  Enabled: true
+  EnforcedStyle: comparison

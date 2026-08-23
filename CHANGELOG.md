@@ -21,6 +21,17 @@ upload content scanner and the save-time gate — closing audit finding CF-8, wh
 lockfile pinned the vulnerable 2.9.2. Development/CI only; the packaged gem is unchanged.
 [#71](https://github.com/owen2345/cama_contact_form/pull/71).
 
+### Tooling: RuboCop, a committed lockfile, and CI caching
+
+Adds RuboCop with the same plugin set and configuration as camaleon_cms, so style stays consistent
+across the two, and brings the existing code up to it: auto-correctable offences are fixed, and the
+size/complexity metrics plus a few convention cops are relaxed with a documented reason in
+`.rubocop.yml` (there is no `.rubocop_todo.yml`) — no behaviour or rendered output changed, verified
+by re-running the field/message renderers before and after. `Gemfile.lock` is now committed, so the
+exact gem versions the suite runs against are known and reproducible — which also makes CI's
+`bundler-cache` effective; a RuboCop result cache is added too. Development/CI only; the packaged gem
+is unchanged. [#72](https://github.com/owen2345/cama_contact_form/pull/72).
+
 ## 0.1.12
 
 Two independent changes ship together. Each section links its PR — the reasoning, the exploits and

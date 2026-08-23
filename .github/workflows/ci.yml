@@ -1,6 +1,7 @@
-# Runs the RSpec suite against a camaleon_cms-backed dummy Rails app (see spec/). Gemfile.lock is
-# not committed (this is a gem), so `bundle install` resolves camaleon_cms fresh from RubyGems every
-# run -- which keeps CI on a current, non-vulnerable core (>= 2.9.3) rather than a pinned old one.
+# CI for the plugin's own suite: RSpec (against a camaleon_cms-backed dummy Rails app, see spec/) and
+# RuboCop. Gemfile.lock is committed, so `bundler-cache: true` restores the exact, known gem set from
+# cache instead of resolving and installing every run; the pinned camaleon_cms (floored at >= 2.9.3 in
+# the Gemfile) is a current, non-vulnerable core.
 name: CI
 
 on:
@@ -27,9 +28,9 @@ jobs:
         with:
           persist-credentials: false
 
-      # ruby-version comes from .tool-versions (3.4.9). bundler-cache runs `bundle install` and
-      # caches the result; the sqlite3 gem ships a precompiled linux binary, so no apt packages are
-      # needed.
+      # ruby-version comes from .tool-versions. bundler-cache caches the installed gems keyed on the
+      # committed Gemfile.lock; the sqlite3 gem ships a precompiled linux binary, so no apt packages
+      # are needed.
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: .tool-versions
@@ -43,3 +44,32 @@ jobs:
 
       - name: Run the test suite
         run: bundle exec rspec
+
+  rubocop:
+    name: RuboCop
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .tool-versions
+          bundler-cache: true
+
+      # Cache RuboCop's own result cache (keyed on the config + lockfile) so unchanged files are not
+      # re-inspected across runs. Mirrors camaleon_cms.
+      - name: Prepare RuboCop cache
+        uses: actions/cache@v4
+        with:
+          path: tmp/rubocop
+          key: rubocop-${{ runner.os }}-${{ hashFiles('.tool-versions', '.rubocop.yml', '.rubocop_todo.yml', 'Gemfile.lock') }}
+          restore-keys: |
+            rubocop-${{ runner.os }}-
+
+      - name: Lint code for consistent style
+        run: bin/rubocop -f github
+        env:
+          RUBOCOP_CACHE_ROOT: tmp/rubocop
