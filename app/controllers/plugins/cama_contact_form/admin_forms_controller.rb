@@ -6,6 +6,24 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern
 
+  # The markup gate delegates to CamaleonCms::UnsafeMarkup, which ships in camaleon_cms >= 2.9.3. That
+  # floor is not expressible as a gemspec dependency -- camaleon_cms depends on this gem, so a reverse
+  # pin would be circular -- and camaleon_cms 2.9.2 pins `cama_contact_form ~> 0.1.0`, wide enough to
+  # resolve this release against a core that lacks the detector. Fail fast and clearly at load, rather
+  # than with a bare NameError deep inside the first untrusted save: without the detector nothing can
+  # be gated, so the plugin must not run at all against an incompatible core.
+  def self.core_markup_detector_available?
+    defined?(CamaleonCms::UnsafeMarkup) ? true : false
+  end
+
+  def self.ensure_core_markup_detector!
+    return if core_markup_detector_available?
+
+    raise "cama_contact_form #{::CamaContactForm::VERSION} requires camaleon_cms >= 2.9.3 " \
+          '(CamaleonCms::UnsafeMarkup is unavailable).'
+  end
+  ensure_core_markup_detector!
+
   before_action :set_form, only: %w[show edit update destroy]
   add_breadcrumb I18n.t('plugins.cama_contact_form.title', default: 'Contact Form'),
                  :admin_plugins_cama_contact_form_admin_forms_path
@@ -161,16 +179,10 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   URL_IGNORABLE_CHARS = /[[:space:]\u0000-\u001F\u007F]/
   DANGEROUS_URL_SCHEME = /\A(?:javascript|vbscript|data):/i
 
-  # `unsafe_markup?` asks the sanitizer what it would remove. Comparing its output against the *input*
-  # asks a different and much broader question -- "is this spelled the way Nokogiri spells it" -- and
-  # answers yes for a great deal of ordinary authored text: `Tom & Jerry`, `&nbsp;`, `<br/>`,
-  # single-quoted attributes, uppercase tags, and this plugin's own default field template. Comparing
-  # against the *reserialized* input instead cancels every such difference out, because both sides
-  # then go through the same parse and the same serializer, and only a genuine removal registers.
-  #
-  # The safe list is Rails' own, widened with the layout elements these positions legitimately carry.
-  # Rails' list is tuned for prose and omits `label`, `section`, `fieldset` and the table elements --
-  # which is why the plugin's own default template was refused by an earlier implementation.
+  # The safe list CamaleonCms::UnsafeMarkup scrubs these positions against: Rails' own, widened with
+  # the layout elements these positions legitimately carry. Rails' list is tuned for prose and omits
+  # `label`, `section`, `fieldset` and the table elements -- which is why the plugin's own default
+  # template was refused by an earlier implementation.
   #
   # `rel` and `target` are deliberately NOT added. Rails omits them on purpose: `rel="opener"` is the
   # explicit opt-back-in to the `window.opener` handle that browsers disable for `target="_blank"`,
@@ -182,42 +194,13 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   MARKUP_ATTRS = (Rails::HTML5::SafeListSanitizer.allowed_attributes +
                   %w[id for colspan rowspan span role tabindex hidden]).freeze
 
-  # `data-*` and `aria-*` cannot be listed, because the set is open. They carry no behaviour of their
-  # own -- a `data-` attribute is inert without script, and an `aria-` attribute only annotates -- so
-  # they are admitted by shape. Without this an author cannot save an accessible field template or a
-  # Bootstrap wrapper, which is most of what `template` exists for, and the refusal names an
-  # attribute the message never mentions.
-  OPEN_ATTR_NAME = /\A(?:data|aria)-[a-zA-Z][-a-zA-Z0-9_.]*\z/
+  # A well-formed translation marker (`<!--:-->`, `<!--:en-->`). `rendered_forms` strips these to
+  # produce the marker-free string the renderer emits, so the gate judges that form too. Reused from
+  # the core detector rather than re-spelled: the markers this strips and the ones
+  # CamaleonCms::UnsafeMarkup scans around must share one grammar for the gate to stay sound, so they
+  # share one constant.
+  TRANSLATION_MARKER = CamaleonCms::UnsafeMarkup::TRANSLATION_MARKER
 
-  # A PermitScrubber that also keeps `data-`/`aria-` attributes, which the markup allowlist cannot
-  # enumerate.
-  class MarkupScrubber < Rails::HTML::PermitScrubber
-    private
-
-    def scrub_attribute?(name)
-      return false if name.to_s.match?(OPEN_ATTR_NAME)
-
-      super
-    end
-  end
-
-  MARKUP_SCRUBBER = MarkupScrubber.new.tap do |scrubber|
-    scrubber.tags = MARKUP_TAGS
-    scrubber.attributes = MARKUP_ATTRS
-  end
-
-  # A translation marker is an HTML comment, and `cama_sanitize_translatable` deliberately shields
-  # every `<!--` from the sanitizer so those markers survive. That shield is what lets a bare `<!--`
-  # through: plain `sanitize("Read more <!-- hidden")` returns `"Read more "`, but the shielded form
-  # returns it unchanged. Emitted into the page, an unterminated comment swallows everything to the
-  # next `-->`. So comments are checked separately: only well-formed translation markers are allowed.
-  TRANSLATION_MARKER = /<!--:[\w|-]{0,5}-->/
-
-  # `<` only opens a tag when a name, a solidus or a markup declaration follows it. Requiring that
-  # is what keeps `Age < 18` and `5 > 3` out of the tag scanners below -- an earlier version counted
-  # every `<`, so an ordinary translated label containing a comparison was refused.
-  TAG_OPEN = %r{<[a-zA-Z/!?]}
-  START_TAG_NAME = %r{<([a-zA-Z][a-zA-Z0-9]*)(?=[\s/>]|\z)}
   PLACEHOLDER = /\[(?:ci|label ci|descr ci)\]/
 
   # One whole tag, quoted attribute values included, so a `>` written inside an attribute does not
@@ -249,14 +232,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # Permitting also stops unbounded junk being persisted into `settings.to_json`.
   MESSAGE_KEYS = %w[mail_sent_ok mail_sent_ng validation_error invalid_required invalid_email
                     captcha_not_match invalid_content].freeze
-
-  # Nothing below can find anything in a string holding none of these: the sanitizer and the
-  # serializer are both the identity function on it, so the two sides compare equal, and every tag
-  # and comment rule needs a `<`. `&` counts because entity decoding is a rewrite, the sentinels
-  # count because the comment shield deletes any that were supplied raw, and the control characters
-  # count because the HTML parser rewrites them. Tab, newline and carriage return round-trip
-  # unchanged and are deliberately absent.
-  SANITIZER_SIGNIFICANT = /[<>&\u{E000}\u{E001}\u0000-\u0008\u000B\u000C\u000E-\u001F\u{FFFE}\u{FFFF}]/
 
   private
 
@@ -572,66 +547,23 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     [string]
   end
 
+  # Each rendered form is judged by CamaleonCms::UnsafeMarkup, the core scan-and-reject detector this
+  # gate is kept in parity with. It parses once and refuses the value when the safe-list scrubber
+  # would remove anything, when a kept attribute smuggles markup (`title="&lt;img ...&gt;"` reaching a
+  # `data-html` sink), when dangerous inline CSS survives, or when the value carries one of the
+  # structural shapes an HTML parser silently repairs -- an unterminated tag or attribute, a
+  # foster-parented table cell, a translation marker inside a tag. MARKUP_TAGS/MARKUP_ATTRS widen
+  # Rails' safe list with the layout elements these positions carry; `data-`/`aria-` attributes are
+  # admitted by shape by the detector itself.
   def unsafe_markup?(value)
-    rendered_forms(value).any? { |form| unsafe_markup_form?(form) }
+    rendered_forms(value).any? do |form|
+      CamaleonCms::UnsafeMarkup.unsafe_html?(form, tags: MARKUP_TAGS, attributes: MARKUP_ATTRS)
+    end
   end
 
-  # The sanitizer comparison alone is blind in two directions, because it only sees what the safe
-  # list removed from a fragment the parser was willing to build:
-  #
-  #   A tag whose attribute list never closes is dropped at EOF by both sides, so they compare equal
-  #   -- but the browser is not at EOF. `<div class="a" onmouseover="alert(1)" x="` reaches the page,
-  #   finishes its attribute at the next quote in the document, and carries a live handler.
-  #
-  #   A tag the parser cannot place is foster-parented away before the sanitizer ever sees it.
-  #   `<td onmouseover="alert(1)">x</td>` parses to bare text on both sides -- and then renders as a
-  #   live cell as soon as anything opens table context around it.
-  #
-  # Both are caught structurally, by requiring that the value's own tags survive the parse.
-  def unsafe_markup_form?(string)
-    return false unless string.match?(SANITIZER_SIGNIFICANT)
-    return true if disallowed_comment?(string)
-    return true if marker_inside_tag?(string)
-    return true if unterminated_tag?(string)
-
-    shielded = string.gsub(CamaleonRecord::TRANSLATION_TAG_HIDE_REGEX, CamaleonRecord::TRANSLATION_TAG_HIDE_MAP)
-    fragment = Loofah.html5_fragment(shielded)
-    baseline = fragment.to_s
-    return true if markup_dropped?(shielded, fragment)
-
-    # One parse, not two: `SafeListSanitizer#sanitize` is parse + scrub + serialize, and the parse it
-    # would do is the one already done above.
-    fragment.scrub!(MARKUP_SCRUBBER).to_s != baseline
-  end
-
-  # A tag opened after the last `>` is never completed inside this value.
-  def unterminated_tag?(string)
-    string.rpartition('>').last.match?(TAG_OPEN)
-  end
-
-  # Every tag the author wrote has to appear in the parse. Compared by name rather than by count,
-  # because the parser *inserts* elements too -- an implied `<tbody>` would otherwise cancel out a
-  # dropped `<td>` and let the pair through.
-  def markup_dropped?(shielded, fragment)
-    written = shielded.scan(START_TAG_NAME).flatten.map(&:downcase).tally
-    return false if written.empty?
-
-    parsed = fragment.css('*').map { |node| node.name.downcase }.tally
-    written.any? { |name, count| parsed.fetch(name, 0) < count }
-  end
-
-  # A translation marker separates whole translated blocks; it never belongs *inside* a tag. When one
-  # does sit inside a tag, deleting it at render splices the two halves together into markup the
-  # author never wrote and the gate never saw -- `</tex<!--:en-->tarea>` becomes a closing textarea,
-  # and `<a title="<!--:-->` becomes an attribute left hanging open.
-  def marker_inside_tag?(string)
-    return false unless string.include?('<!--')
-
-    token_inside_tag?(string, TRANSLATION_MARKER)
-  end
-
-  # The same question for the renderer's own placeholders. A template that puts one inside a tag
-  # decides the HTML context of a value written somewhere else, possibly by someone else.
+  # A template must not put one of the renderer's own placeholders inside a tag: doing so decides the
+  # HTML context of a value written somewhere else, possibly by someone else. Structural rather than
+  # parse-based (see token_inside_tag?), because an HTML parser silently repairs the shape.
   def placeholder_in_tag?(value)
     string = value.to_s
     return false unless string.include?('[')
@@ -647,12 +579,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     tags = +''
     string.scan(/#{token}|#{TAG_SPAN}/) { |match| tags << match unless match.match?(/\A#{token}\z/) }
     tags.match?(token)
-  end
-
-  # Any `<!--` that is not a well-formed translation marker. A bare `-->` is ordinary text -- an
-  # earlier version compared open and close counts and refused prose containing an ASCII arrow.
-  def disallowed_comment?(string)
-    string.gsub(TRANSLATION_MARKER, '').include?('<!--')
   end
 
   def unsafe_attribute?(value)
