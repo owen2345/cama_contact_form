@@ -14,7 +14,6 @@ AllCops:
     - spec/dummy/**/* # Generated camaleon_cms-backed dummy app (incl. the copied default theme)
     - /**/vendor/**/* # Exclude downloaded gem code in CI
   NewCops: enable
-  SuggestExtensions: false
   TargetRailsVersion: 6.1
   TargetRubyVersion: 3.0 # matches the gemspec's required_ruby_version
 
