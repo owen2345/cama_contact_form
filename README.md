@@ -45,7 +45,7 @@ Edit `lib/cama_contact_form/version.rb`:
 
 ```ruby
 module CamaContactForm
-  VERSION = "0.1.12"
+  VERSION = '0.1.12'
 end
 ```
 
