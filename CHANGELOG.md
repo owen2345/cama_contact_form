@@ -2,24 +2,29 @@
 
 ## Unreleased
 
-### Security: the `forms` shortcode is gated by camaleon-cms
+### Tooling: stricter RuboCop cops
 
-[#69](https://github.com/owen2345/cama_contact_form/pull/69) · pairs with
-[camaleon-cms#1277](https://github.com/owen2345/camaleon-cms/pull/1277), which adds a default-off
-`content_shortcodes` permission and refuses shortcode-bearing content from untrusted authors. This
-release declares the plugin's `forms` shortcode name to camaleon-cms's boot-time
-`CamaleonCms::ShortcodeRegistry`, so a non-administrator without the permission can no longer save
-`[forms ...]` in content. The declaration is guarded — nothing changes against camaleon-cms versions
-predating the registry — and the shortcode's rendering is unchanged.
+Turns on a batch of cops the initial setup had relaxed, fixing the code rather than exempting it:
+`Style/FrozenStringLiteralComment` (magic comments added), `Style/Documentation` (class/module docs),
+`RSpec/SpecFilePathFormat`, `Lint/MissingSuper`, and `Rails/TimeZone` (a response is now timestamped
+in UTC). The `ob` render parameter is renamed to `obj`, dropping the `Naming/MethodParameterName`
+exception; development dependencies move from the gemspec to the Gemfile; and `NewCops` and
+`SuggestExtensions` are enabled, with the pending-cop fallout fixed (constants grouped above
+`private`, in-loop array literals extracted to constants, a duplicate `each_leaf` branch folded, a
+hardcoded flash string moved to `t(...)`). `Rails/InverseOf` (the self-referential `has_many`) and
+`Gemspec/RequireMFA` are the only added exemptions, each with a documented reason. Development/CI
+only; the packaged gem is unchanged. [#PR](https://github.com/owen2345/cama_contact_form/pull/PR).
 
-### Testing: the plugin now has its own RSpec suite
+### Testing: the contact-form specs now live with the plugin
 
-Adds a camaleon_cms-backed dummy Rails app under `spec/` so the plugin can be tested in its own
-repository (booting a real Camaleon host) instead of only in camaleon-cms. Floors the development
-dependency on `camaleon_cms` at `>= 2.9.3`, so tests always run against a core that carries the
-upload content scanner and the save-time gate — closing audit finding CF-8, where the development
-lockfile pinned the vulnerable 2.9.2. Development/CI only; the packaged gem is unchanged.
-[#71](https://github.com/owen2345/cama_contact_form/pull/71).
+Moves the contact-form security specs — request specs for content rejection, output escaping and gate
+soundness, plus the `:js` admin feature spec — out of camaleon-cms and into this repository, now that
+the plugin has its own camaleon_cms-backed harness: the code they exercise lives here. The harness
+gains a headless-Chrome setup (Capybara + Selenium) for the feature spec and a per-suite installed
+site for the request specs. The `contact_form_unfiltered_html` permission-model spec stays in
+camaleon-cms, where that permission is defined. Development/CI only; the packaged gem is unchanged.
+[#73](https://github.com/owen2345/cama_contact_form/pull/73) · pairs with
+[camaleon-cms#1278](https://github.com/owen2345/camaleon-cms/pull/1278), which removes the moved specs.
 
 ### Tooling: RuboCop, a committed lockfile, and CI caching
 
@@ -32,16 +37,24 @@ exact gem versions the suite runs against are known and reproducible — which a
 `bundler-cache` effective; a RuboCop result cache is added too. Development/CI only; the packaged gem
 is unchanged. [#72](https://github.com/owen2345/cama_contact_form/pull/72).
 
-### Testing: the contact-form specs now live with the plugin
+### Testing: the plugin now has its own RSpec suite
 
-Moves the contact-form security specs — request specs for content rejection, output escaping and gate
-soundness, plus the `:js` admin feature spec — out of camaleon-cms and into this repository, now that
-the plugin has its own camaleon_cms-backed harness: the code they exercise lives here. The harness
-gains a headless-Chrome setup (Capybara + Selenium) for the feature spec and a per-suite installed
-site for the request specs. The `contact_form_unfiltered_html` permission-model spec stays in
-camaleon-cms, where that permission is defined. Development/CI only; the packaged gem is unchanged.
-[#73](https://github.com/owen2345/cama_contact_form/pull/73) · pairs with
-[camaleon-cms#1278](https://github.com/owen2345/camaleon-cms/pull/1278), which removes the moved specs.
+Adds a camaleon_cms-backed dummy Rails app under `spec/` so the plugin can be tested in its own
+repository (booting a real Camaleon host) instead of only in camaleon-cms. Floors the development
+dependency on `camaleon_cms` at `>= 2.9.3`, so tests always run against a core that carries the
+upload content scanner and the save-time gate — closing audit finding CF-8, where the development
+lockfile pinned the vulnerable 2.9.2. Development/CI only; the packaged gem is unchanged.
+[#71](https://github.com/owen2345/cama_contact_form/pull/71).
+
+### Security: the `forms` shortcode is gated by camaleon-cms
+
+[#69](https://github.com/owen2345/cama_contact_form/pull/69) · pairs with
+[camaleon-cms#1277](https://github.com/owen2345/camaleon-cms/pull/1277), which adds a default-off
+`content_shortcodes` permission and refuses shortcode-bearing content from untrusted authors. This
+release declares the plugin's `forms` shortcode name to camaleon-cms's boot-time
+`CamaleonCms::ShortcodeRegistry`, so a non-administrator without the permission can no longer save
+`[forms ...]` in content. The declaration is guarded — nothing changes against camaleon-cms versions
+predating the registry — and the shortcode's rendering is unchanged.
 
 ## 0.1.12
 
