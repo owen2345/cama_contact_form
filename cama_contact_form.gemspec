@@ -29,6 +29,13 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec-rails'
   s.add_development_dependency 'sqlite3'
 
+  # Feature specs (:js) drive the admin UI through a real headless Chrome via Capybara + Selenium.
+  # puma is the Capybara rack server; capybara-screenshot saves a screenshot when a :js example fails.
+  s.add_development_dependency 'capybara'
+  s.add_development_dependency 'capybara-screenshot'
+  s.add_development_dependency 'puma'
+  s.add_development_dependency 'selenium-webdriver'
+
   # Linting -- same rubocop plugin set as camaleon_cms, so style stays consistent across the two.
   s.add_development_dependency 'rubocop'
   s.add_development_dependency 'rubocop-capybara'

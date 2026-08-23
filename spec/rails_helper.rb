@@ -51,6 +51,10 @@ RSpec.configure do |config|
     CamaleonCms::Site.instance_variable_set(:@main_site, nil)
     PluginRoutes.instance_variable_set(:@all_sites, nil)
     PluginRoutes.instance_variable_get(:@cache)&.clear
+    # Core's brute-force counters live in Rails.cache (FileStore here) and outlive the per-example
+    # transaction, so clear them or a run of frontend submissions in one example bans the shared
+    # client IP for the next.
+    Rails.cache.delete_matched(/cama_captcha_attack|plugins_attack_ban/) if Rails.cache.respond_to?(:delete_matched)
     I18n.locale = I18n.default_locale
   end
 end
