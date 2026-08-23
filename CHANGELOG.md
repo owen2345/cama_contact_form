@@ -4,7 +4,7 @@
 
 ### Security: authored-markup gate delegates to camaleon-cms's UnsafeMarkup
 
-The admin form editor's markup gate now calls `CamaleonCms::UnsafeMarkup` instead of a private fork that had drifted behind it. This closes a gap the core detector already covered: entity-encoded markup smuggled through a kept attribute (`title`, `data-*`, `aria-*`), which a client-side `data-html` sink (Bootstrap tooltip/popover) injects as live markup, was accepted, now refused. Needs `camaleon_cms >= 2.9.3`, already the floor. [#75](https://github.com/owen2345/cama_contact_form/pull/75).
+The admin form editor's markup gate now calls `CamaleonCms::UnsafeMarkup` instead of a drifted private fork. This closes a gap the core detector already covered: entity-encoded markup smuggled through a kept attribute (`title`, `data-*`, `aria-*`) and injected as live markup by a `data-html` sink (Bootstrap tooltip/popover) was accepted, now refused. Requires `camaleon_cms >= 2.9.3`, now checked at load with a clear error. [#75](https://github.com/owen2345/cama_contact_form/pull/75).
 
 ### Tooling: stricter RuboCop cops
 
