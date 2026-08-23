@@ -195,8 +195,11 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
                   %w[id for colspan rowspan span role tabindex hidden]).freeze
 
   # A well-formed translation marker (`<!--:-->`, `<!--:en-->`). `rendered_forms` strips these to
-  # produce the marker-free string the renderer emits, so the gate judges that form too.
-  TRANSLATION_MARKER = /<!--:[\w|-]{0,5}-->/
+  # produce the marker-free string the renderer emits, so the gate judges that form too. Reused from
+  # the core detector rather than re-spelled: the markers this strips and the ones
+  # CamaleonCms::UnsafeMarkup scans around must share one grammar for the gate to stay sound, so they
+  # share one constant.
+  TRANSLATION_MARKER = CamaleonCms::UnsafeMarkup::TRANSLATION_MARKER
 
   PLACEHOLDER = /\[(?:ci|label ci|descr ci)\]/
 

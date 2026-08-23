@@ -23,4 +23,13 @@ RSpec.describe 'Security: markup gate delegation' do
         .to raise_error(/requires camaleon_cms >= 2\.9\.3/)
     end
   end
+
+  describe 'TRANSLATION_MARKER' do
+    # rendered_forms strips markers to build the form the renderer emits, while the detector scans
+    # around markers; if the two grammars drifted, a payload split across a marker could slip the
+    # gate. Reusing the detector's own constant makes that drift impossible -- same object, not a copy.
+    it "is the core detector's constant, not a re-spelled copy" do
+      expect(controller_class::TRANSLATION_MARKER).to equal(CamaleonCms::UnsafeMarkup::TRANSLATION_MARKER)
+    end
+  end
 end
