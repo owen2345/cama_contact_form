@@ -99,9 +99,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     render partial: 'item_field', locals: { field_type: params[:kind], cid: params[:cid] }
   end
 
-  # here add your custom functions
-  private
-
   # Values the author writes that reach the page verbatim. Nothing here is rewritten on save: an
   # author either holds :manage, :contact_form_unfiltered_html and their content is stored exactly as
   # written, or the save is rejected and they are told which field to fix.
@@ -243,6 +240,24 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   MAX_FIELDS = 200
   MAX_OPTIONS_PER_FIELD = 100
   MAX_GATED_VALUE_BYTES = 64 * 1024
+
+  # The messages the form editor offers, plus `invalid_content`, which the gate itself emits.
+  #
+  # Permitted rather than taken wholesale. `railscf_message` used to go straight from params into the
+  # gate, which runs a full Loofah parse per leaf -- so the number of parses was chosen by the caller.
+  # Permitting also stops unbounded junk being persisted into `settings.to_json`.
+  MESSAGE_KEYS = %w[mail_sent_ok mail_sent_ng validation_error invalid_required invalid_email
+                    captcha_not_match invalid_content].freeze
+
+  # Nothing below can find anything in a string holding none of these: the sanitizer and the
+  # serializer are both the identity function on it, so the two sides compare equal, and every tag
+  # and comment rule needs a `<`. `&` counts because entity decoding is a rewrite, the sentinels
+  # count because the comment shield deletes any that were supplied raw, and the control characters
+  # count because the HTML parser rewrites them. Tab, newline and carriage return round-trip
+  # unchanged and are deliberately absent.
+  SANITIZER_SIGNIFICANT = /[<>&\u{E000}\u{E001}\u0000-\u0008\u000B\u000C\u000E-\u001F\u{FFFE}\u{FFFF}]/
+
+  private
 
   # Mirrors CamaleonCms::Post#trusted_for_unfiltered_html?: read the acting user and site from
   # CurrentRequest and fail closed when either is missing, so saves from background jobs, rake tasks
@@ -468,14 +483,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     end
   end
 
-  # The messages the form editor offers, plus `invalid_content`, which the gate itself emits.
-  #
-  # Permitted rather than taken wholesale. `railscf_message` used to go straight from params into the
-  # gate, which runs a full Loofah parse per leaf -- so the number of parses was chosen by the caller.
-  # Permitting also stops unbounded junk being persisted into `settings.to_json`.
-  MESSAGE_KEYS = %w[mail_sent_ok mail_sent_ng validation_error invalid_required invalid_email
-                    captcha_not_match invalid_content].freeze
-
   def permitted_messages
     messages = params[:railscf_message]
     return messages unless messages.respond_to?(:permit)
@@ -569,14 +576,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   def unsafe_markup?(value)
     rendered_forms(value).any? { |form| unsafe_markup_form?(form) }
   end
-
-  # Nothing below can find anything in a string holding none of these: the sanitizer and the
-  # serializer are both the identity function on it, so the two sides compare equal, and every tag
-  # and comment rule needs a `<`. `&` counts because entity decoding is a rewrite, the sentinels
-  # count because the comment shield deletes any that were supplied raw, and the control characters
-  # count because the HTML parser rewrites them. Tab, newline and carriage return round-trip
-  # unchanged and are deliberately absent.
-  SANITIZER_SIGNIFICANT = /[<>&\u{E000}\u{E001}\u0000-\u0008\u000B\u000C\u000E-\u001F\u{FFFE}\u{FFFF}]/
 
   # The sanitizer comparison alone is blind in two directions, because it only sees what the safe
   # list removed from a fragment the parser was willing to build:
