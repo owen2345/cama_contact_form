@@ -81,9 +81,6 @@ Layout/MultilineMethodCallIndentation:
   Enabled: true
   EnforcedStyle: aligned
 
-Lint/MissingSuper:
-  Enabled: false
-
 Rails/Delegate:
   Enabled: false
 
