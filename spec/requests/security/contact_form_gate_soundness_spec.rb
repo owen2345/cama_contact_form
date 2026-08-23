@@ -339,6 +339,49 @@ RSpec.describe 'Security: contact form gate soundness' do
     end
   end
 
+  # --- 5. Markup smuggled through an attribute the scrubber keeps ------------
+  #
+  # The safe-list comparison only sees what the scrubber *removed*. An allowed attribute like `title`,
+  # or a `data-`/`aria-` attribute admitted by shape, is kept -- so entity-encoded markup in its value
+  # round-trips unchanged and the comparison reads "safe". But the HTML parser has already decoded the
+  # entities on the node, so a client-side `data-html` sink (a Bootstrap tooltip or popover) injects
+  # that value as live markup at render. Caught structurally by `CamaleonCms::UnsafeMarkup`, the core
+  # detector this gate delegates to; the plugin's own fork of it did not catch this.
+  describe 'markup smuggled through a kept attribute' do
+    let(:user) { role_with({ 'plugins' => 1 }, 'plugins-manager') }
+
+    before { sign_in_as(user, site: current_site) }
+
+    {
+      'the title attribute' => '<a title="&lt;img src=x onerror=alert(1)&gt;">Hover</a>',
+      'a data- attribute admitted by shape' => "<div data-content='&lt;img src=x onerror=alert(1)&gt;'>x</div>",
+      'an aria- attribute admitted by shape' => "<span aria-label='&lt;svg onload=alert(1)&gt;'>x</span>"
+    }.each do |description, payload|
+      it "refuses entity-encoded markup in #{description}" do
+        save(railscf_mail: { to: 'a@b.c', subject: 's', body: 'b', after_html: payload }, fields: field)
+
+        expect(form.the_settings[:railscf_mail]).to be_blank
+      end
+    end
+
+    # The same value written into a template, where the author controls both the attribute and where
+    # `[ci]` lands -- refused for everyone, since a data-html sink does not care who authored it.
+    it 'refuses entity-encoded markup in a template attribute' do
+      save(fields: field(field_options: { template: "<div title='&lt;img src=x onerror=alert(1)&gt;'>[ci]</div>" }))
+
+      expect(form.fields).to be_blank
+    end
+
+    # The comparison-passing counterpart the plugin must still accept: an ordinary title with no markup
+    # in it. Guards against the new check hardening into a blanket refusal of the attribute.
+    it 'still accepts an ordinary title attribute' do
+      save(railscf_mail: { to: 'a@b.c', subject: 's', body: 'b', after_html: '<a title="Read more">Hover</a>' },
+           fields: field)
+
+      expect(form.the_settings[:railscf_mail][:after_html]).to eq('<a title="Read more">Hover</a>')
+    end
+  end
+
   # --- the gate must not refuse what authors actually write -----------------
   describe 'ordinary authored markup and prose are accepted' do
     let(:user) { role_with({ 'plugins' => 1 }, 'plugins-manager') }
