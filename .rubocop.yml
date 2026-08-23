@@ -63,10 +63,6 @@ Rails/ApplicationRecord:
 Rails/InverseOf:
   Enabled: false
 
-# `Time.now` stamps a response identifier only, which is not timezone-sensitive.
-Rails/TimeZone:
-  Enabled: false
-
 # ------------------------------------------------------------------------------------------------
 
 Layout/MultilineMethodCallIndentation:

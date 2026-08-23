@@ -41,8 +41,8 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       end
       fields[f[:cid].to_sym] = file_paths
     end
-    new_settings = { 'fields' => fields, 'created_at' => Time.current.strftime('%Y-%m-%d %H:%M:%S').to_s }.to_json
-    form_new = current_site.contact_forms.new(name: "response-#{Time.now}", description: form.description,
+    new_settings = { 'fields' => fields, 'created_at' => Time.now.utc.strftime('%Y-%m-%d %H:%M:%S').to_s }.to_json
+    form_new = current_site.contact_forms.new(name: "response-#{Time.now.utc}", description: form.description,
                                               settings: new_settings, site_id: form.site_id, parent_id: form.id)
     if form_new.save
       fields_data = convert_form_values(form, fields)
