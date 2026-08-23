@@ -67,14 +67,6 @@ Rails/InverseOf:
 Rails/TimeZone:
   Enabled: false
 
-# `ob` is the plugin's legacy name for the form-field object, used throughout the render helpers;
-# renaming ~15 references carries more risk than the short name. Merged with RuboCop's default list.
-Naming/MethodParameterName:
-  AllowedNames:
-    - ob
-  inherit_mode:
-    merge:
-      - AllowedNames
 # ------------------------------------------------------------------------------------------------
 
 Layout/MultilineMethodCallIndentation:
