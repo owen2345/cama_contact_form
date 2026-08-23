@@ -21,5 +21,4 @@ Gem::Specification.new do |s|
 
   s.add_dependency "rails"
   s.add_dependency "recaptcha", ">= 5.0"
-  s.add_development_dependency "sqlite3"
 end
