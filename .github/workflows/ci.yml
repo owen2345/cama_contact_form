@@ -1,0 +1,45 @@
+# Runs the RSpec suite against a camaleon_cms-backed dummy Rails app (see spec/). Gemfile.lock is
+# not committed (this is a gem), so `bundle install` resolves camaleon_cms fresh from RubyGems every
+# run -- which keeps CI on a current, non-vulnerable core (>= 2.9.3) rather than a pinned old one.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rspec:
+    name: RSpec
+    runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # ruby-version comes from .tool-versions (3.4.9). bundler-cache runs `bundle install` and
+      # caches the result; the sqlite3 gem ships a precompiled linux binary, so no apt packages are
+      # needed.
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .tool-versions
+          bundler-cache: true
+
+      # Rails/engine commands must run from the dummy app (this repo is a gem). Load the checked-in
+      # schema into a fresh sqlite test database.
+      - name: Prepare the test database
+        run: bundle exec rails db:test:prepare
+        working-directory: spec/dummy
+
+      - name: Run the test suite
+        run: bundle exec rspec

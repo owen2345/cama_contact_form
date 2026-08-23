@@ -4,12 +4,22 @@
 
 ### Security: the `forms` shortcode is gated by camaleon-cms
 
-Pairs with [camaleon-cms#1277](https://github.com/owen2345/camaleon-cms/pull/1277), which adds a
-default-off `content_shortcodes` permission and refuses shortcode-bearing content from untrusted
-authors. This release declares the plugin's `forms` shortcode name to camaleon-cms's boot-time
+[#69](https://github.com/owen2345/cama_contact_form/pull/69) · pairs with
+[camaleon-cms#1277](https://github.com/owen2345/camaleon-cms/pull/1277), which adds a default-off
+`content_shortcodes` permission and refuses shortcode-bearing content from untrusted authors. This
+release declares the plugin's `forms` shortcode name to camaleon-cms's boot-time
 `CamaleonCms::ShortcodeRegistry`, so a non-administrator without the permission can no longer save
 `[forms ...]` in content. The declaration is guarded — nothing changes against camaleon-cms versions
 predating the registry — and the shortcode's rendering is unchanged.
+
+### Testing: the plugin now has its own RSpec suite
+
+Adds a camaleon_cms-backed dummy Rails app under `spec/` so the plugin can be tested in its own
+repository (booting a real Camaleon host) instead of only in camaleon-cms. Floors the development
+dependency on `camaleon_cms` at `>= 2.9.3`, so tests always run against a core that carries the
+upload content scanner and the save-time gate — closing audit finding CF-8, where the development
+lockfile pinned the vulnerable 2.9.2. Development/CI only; the packaged gem is unchanged.
+[#71](https://github.com/owen2345/cama_contact_form/pull/71).
 
 ## 0.1.12
 
