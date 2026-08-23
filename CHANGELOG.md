@@ -40,7 +40,7 @@ the plugin has its own camaleon_cms-backed harness: the code they exercise lives
 gains a headless-Chrome setup (Capybara + Selenium) for the feature spec and a per-suite installed
 site for the request specs. The `contact_form_unfiltered_html` permission-model spec stays in
 camaleon-cms, where that permission is defined. Development/CI only; the packaged gem is unchanged.
-[#PR](https://github.com/owen2345/cama_contact_form/pull/PR) · pairs with
+[#73](https://github.com/owen2345/cama_contact_form/pull/73) · pairs with
 [camaleon-cms#PR](https://github.com/owen2345/camaleon-cms/pull/PR), which removes the moved specs.
 
 ## 0.1.12
