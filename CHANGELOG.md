@@ -24,9 +24,11 @@ lockfile pinned the vulnerable 2.9.2. Development/CI only; the packaged gem is u
 ### Tooling: RuboCop, a committed lockfile, and CI caching
 
 Adds RuboCop with the same plugin set and configuration as camaleon_cms, so style stays consistent
-across the two. Existing offences in the legacy code are grandfathered into `.rubocop_todo.yml` and
-fixed as files are touched; new code is held to the full config. `Gemfile.lock` is now committed, so
-the exact gem versions the suite runs against are known and reproducible — which also makes CI's
+across the two, and brings the existing code up to it: auto-correctable offences are fixed, and the
+size/complexity metrics plus a few convention cops are relaxed with a documented reason in
+`.rubocop.yml` (there is no `.rubocop_todo.yml`) — no behaviour or rendered output changed, verified
+by re-running the field/message renderers before and after. `Gemfile.lock` is now committed, so the
+exact gem versions the suite runs against are known and reproducible — which also makes CI's
 `bundler-cache` effective; a RuboCop result cache is added too. Development/CI only; the packaged gem
 is unchanged. [#72](https://github.com/owen2345/cama_contact_form/pull/72).
 

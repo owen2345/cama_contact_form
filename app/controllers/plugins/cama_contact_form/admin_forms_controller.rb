@@ -1,33 +1,36 @@
 class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::PluginsAdminController
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern
-  before_action :set_form, only: ['show','edit','update','destroy']
-  add_breadcrumb I18n.t("plugins.cama_contact_form.title", default: 'Contact Form'), :admin_plugins_cama_contact_form_admin_forms_path
+  before_action :set_form, only: %w[show edit update destroy]
+  add_breadcrumb I18n.t('plugins.cama_contact_form.title', default: 'Contact Form'),
+                 :admin_plugins_cama_contact_form_admin_forms_path
 
   def index
-    @forms = current_site.contact_forms.where("parent_id is null").all
-    @forms = @forms.paginate(:page => params[:page], :per_page => current_site.admin_per_page)
+    @forms = current_site.contact_forms.where('parent_id is null').all
+    @forms = @forms.paginate(page: params[:page], per_page: current_site.admin_per_page)
   end
 
-  def show
-
-  end
+  def show; end
 
   def edit
-    add_breadcrumb I18n.t("plugins.cama_contact_form.edit_view", default: 'Edit contact form')
-    render "edit"
+    add_breadcrumb I18n.t('plugins.cama_contact_form.edit_view', default: 'Edit contact form')
+    render 'edit'
   end
 
   def update
     form_params = params.require(:plugins_cama_contact_form_cama_contact_form).permit(:name, :slug)
-    settings = {"railscf_mail" => params[:railscf_mail], "railscf_message" => permitted_messages, "railscf_form_button" => params[:railscf_form_button], recaptcha_site_key: params[:recaptcha_site_key], recaptcha_secret_key: params[:recaptcha_secret_key]}
+    settings = { 'railscf_mail' => params[:railscf_mail],
+                 'railscf_message' => permitted_messages,
+                 'railscf_form_button' => params[:railscf_form_button],
+                 recaptcha_site_key: params[:recaptcha_site_key],
+                 recaptcha_secret_key: params[:recaptcha_secret_key] }
 
     # The shape of `params` is chosen by the client, not by the form editor, and every check below
     # indexes into it. Verified first, for everyone, so that nothing downstream -- here or in the
     # renderer -- has to cope with a String where it expected a Hash.
     if (malformed = first_malformed_shape_key(settings))
       return reject_save(t('.malformed_structure', field: malformed,
-                           default: 'A field has a malformed %{field}. Nothing was saved.'))
+                                                   default: 'A field has a malformed %{field}. Nothing was saved.'))
     end
 
     fields = submitted_fields
@@ -36,17 +39,15 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     # rather than persisting the name and slug and dropping everything else.
     if (malformed = first_malformed_structural_key(fields))
       return reject_save(t('.malformed_structure', field: malformed,
-                           default: 'A field has a malformed %{field}. Nothing was saved.'))
+                                                   default: 'A field has a malformed %{field}. Nothing was saved.'))
     end
 
-    unless trusted_for_unfiltered_html?
-      if (rejected = first_unpermitted_html_key(settings, fields))
-        return reject_save(rejection_message(*rejected))
-      end
+    if !trusted_for_unfiltered_html? && (rejected = first_unpermitted_html_key(settings, fields))
+      return reject_save(rejection_message(*rejected))
     end
 
     if @form.update(form_params)
-      @form.update({settings: settings.to_json, value: {fields: fields}.to_json})
+      @form.update({ settings: settings.to_json, value: { fields: fields }.to_json })
       flash[:notice] = t('.updated_success', default: 'Updated successfully')
       redirect_to action: :edit, id: @form.id
     else
@@ -55,9 +56,10 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   end
 
   def create
-    @form = current_site.contact_forms.new(params.require(:plugins_cama_contact_form_cama_contact_form).permit(:name, :slug))
+    @form = current_site.contact_forms.new(params.require(:plugins_cama_contact_form_cama_contact_form).permit(:name,
+                                                                                                               :slug))
     if @form.save
-      flash[:notice] = "#{t('.created', default: 'Created successfully')}"
+      flash[:notice] = t('.created', default: 'Created successfully').to_s
       redirect_to action: :edit, id: @form.id
     else
       flash[:error] = @form.errors.full_messages.join(', ')
@@ -66,33 +68,31 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   end
 
   def destroy
-    flash[:notice] = "#{t('.deleted', default: 'Destroyed successfully')}" if @form.destroy
+    flash[:notice] = t('.deleted', default: 'Destroyed successfully').to_s if @form.destroy
     redirect_to action: :index
   end
 
   def responses
-    add_breadcrumb I18n.t("plugins.cama_contact_form.list_responses", default: 'Contact form records')
-    @form = current_site.contact_forms.where({id: params[:admin_form_id]}).first
+    add_breadcrumb I18n.t('plugins.cama_contact_form.list_responses', default: 'Contact form records')
+    @form = current_site.contact_forms.where({ id: params[:admin_form_id] }).first
     values = JSON.parse(@form.value).to_sym
-    @op_fields = values[:fields].select{ |field| relevant_field? field }
-    @forms = current_site.contact_forms.where({parent_id: @form.id})
-    @forms = @forms.paginate(:page => params[:page], :per_page => current_site.admin_per_page)
+    @op_fields = values[:fields].select { |field| relevant_field? field }
+    @forms = current_site.contact_forms.where({ parent_id: @form.id })
+    @forms = @forms.paginate(page: params[:page], per_page: current_site.admin_per_page)
   end
 
   def del_response
-    response = current_site.contact_forms.find_by_id(params[:response_id])
+    response = current_site.contact_forms.find_by(id: params[:response_id])
     if response.present? && response.destroy
-      flash[:notice] = "#{t('.actions.msg_deleted', default: 'The response has been deleted')}"
+      flash[:notice] = t('.actions.msg_deleted', default: 'The response has been deleted').to_s
     end
     redirect_to action: :responses
   end
 
-  def manual
-
-  end
+  def manual; end
 
   def item_field
-    render partial: 'item_field', locals:{ field_type: params[:kind], cid: params[:cid] }
+    render partial: 'item_field', locals: { field_type: params[:kind], cid: params[:cid] }
   end
 
   # here add your custom functions
@@ -212,8 +212,8 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # `<` only opens a tag when a name, a solidus or a markup declaration follows it. Requiring that
   # is what keeps `Age < 18` and `5 > 3` out of the tag scanners below -- an earlier version counted
   # every `<`, so an ordinary translated label containing a comparison was refused.
-  TAG_OPEN = /<[a-zA-Z\/!?]/
-  START_TAG_NAME = /<([a-zA-Z][a-zA-Z0-9]*)(?=[\s\/>]|\z)/
+  TAG_OPEN = %r{<[a-zA-Z/!?]}
+  START_TAG_NAME = %r{<([a-zA-Z][a-zA-Z0-9]*)(?=[\s/>]|\z)}
   PLACEHOLDER = /\[(?:ci|label ci|descr ci)\]/
 
   # One whole tag, quoted attribute values included, so a `>` written inside an attribute does not
@@ -277,10 +277,10 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   #
   # Stops at the first offender rather than collecting them all: nothing is saved either way.
   def first_unpermitted_html_key(settings, fields)
-    mail = settings["railscf_mail"]
+    mail = settings['railscf_mail']
     MARKUP_MAIL_KEYS.each { |k| return [k, :markup] if unsafe_markup?(at(mail, k)) }
-    return ["submit button label", :markup] if unsafe_markup?(at(settings["railscf_form_button"], "name_button"))
-    return ["response message", :markup] if unsafe_messages?(settings["railscf_message"])
+    return ['submit button label', :markup] if unsafe_markup?(at(settings['railscf_form_button'], 'name_button'))
+    return ['response message', :markup] if unsafe_messages?(settings['railscf_message'])
 
     ATTRIBUTE_SETTING_KEYS.each { |k| return [k.to_s, :attribute] if unsafe_attribute?(settings[k]) }
 
@@ -288,7 +288,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
       MARKUP_FIELD_KEYS.each { |k| return [k, :markup] if unsafe_markup?(at(field, k)) }
       ATTRIBUTE_FIELD_KEYS.each { |k| return [k, :attribute] if unsafe_attribute?(at(field, k)) }
       if (rule = unsafe_default_value_rule(field))
-        return ["default_value", rule]
+        return ['default_value', rule]
       end
 
       options = at(field, :field_options)
@@ -296,16 +296,16 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
       MARKUP_FIELD_OPTION_KEYS.each { |k| return [k, :markup] if unsafe_markup?(at(options, k)) }
       ATTRIBUTE_FIELD_OPTION_KEYS.each { |k| return [k, :attribute] if unsafe_attribute?(at(options, k)) }
-      return ["field_attributes", :attributes_json] if unsafe_attribute_json?(at(options, "field_attributes"))
+      return ['field_attributes', :attributes_json] if unsafe_attribute_json?(at(options, 'field_attributes'))
 
       # An option label reaches BOTH positions no matter what the template says: it is element
       # content inside the `<label>`, and the renderer also derives the control's `value="..."`
       # from it. So it carries both rules, unlike `description`, which the template can only ever
       # place as element content.
       Array(at(options, :options)).each do |option|
-        label = at(option, "label")
-        return ["option label", :markup] if unsafe_markup?(label)
-        return ["option label", :attribute] if unsafe_attribute?(label)
+        label = at(option, 'label')
+        return ['option label', :markup] if unsafe_markup?(label)
+        return ['option label', :attribute] if unsafe_attribute?(label)
       end
     end
 
@@ -362,9 +362,9 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
       end
       @form.value = { fields: redrawn }.to_json
     end
-    @form.settings = { "railscf_mail" => params[:railscf_mail],
-                       "railscf_message" => params[:railscf_message],
-                       "railscf_form_button" => params[:railscf_form_button],
+    @form.settings = { 'railscf_mail' => params[:railscf_mail],
+                       'railscf_message' => params[:railscf_message],
+                       'railscf_form_button' => params[:railscf_form_button],
                        recaptcha_site_key: params[:recaptcha_site_key],
                        recaptcha_secret_key: params[:recaptcha_secret_key] }.to_json
   rescue StandardError
@@ -375,23 +375,26 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     case rule
     when :attribute
       t('.unsafe_attribute_rejected', field: rejected,
-        default: 'The %{field} contains a double quote, which would break the HTML attribute it is ' \
+                                      default: 'The %{field} contains a double quote, which would break the HTML ' \
+                 'attribute it is ' \
                  'written into. Nothing was saved. Remove it, or ask an administrator to grant the ' \
                  '"Allow unfiltered HTML in contact forms" permission.')
     when :textarea
       t('.unsafe_textarea_rejected', field: rejected,
-        default: 'The %{field} closes the text box it is written into. Nothing was saved. Remove ' \
+                                     default: 'The %{field} closes the text box it is written into. Nothing was ' \
+                 'saved. Remove ' \
                  'the closing tag, or ask an administrator to grant the "Allow unfiltered HTML in ' \
                  'contact forms" permission.')
     when :attributes_json
       t('.unsafe_attributes_rejected', field: rejected,
-        default: 'The %{field} contains an attribute your role is not permitted to save: an event ' \
+                                       default: 'The %{field} contains an attribute your role is not permitted to ' \
+                 'save: an event ' \
                  'handler, an inline style, a script URL, or a malformed name. Nothing was saved. ' \
                  'Remove it, or ask an administrator to grant the "Allow unfiltered HTML in contact ' \
                  'forms" permission.')
     else
       t('.unfiltered_html_rejected', field: rejected,
-        default: 'The %{field} contains HTML that your role is not permitted to save. ' \
+                                     default: 'The %{field} contains HTML that your role is not permitted to save. ' \
                  'Nothing was saved. Remove it, or ask an administrator to grant the ' \
                  '"Allow unfiltered HTML in contact forms" permission.')
     end
@@ -406,36 +409,36 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     # string is a shape the editor never sends -- and `("" || {}).each` is a NoMethodError, because
     # `""` is truthy.
     fields_param = params[:fields]
-    return "form fields" unless fields_param.nil? || hashish?(fields_param)
+    return 'form fields' unless fields_param.nil? || hashish?(fields_param)
 
     if hashish?(fields_param)
-      return "field count" if fields_param.keys.size > MAX_FIELDS
+      return 'field count' if fields_param.keys.size > MAX_FIELDS
 
       fields_param.each_value do |field|
-        return "form field" unless hashish?(field)
+        return 'form field' unless hashish?(field)
 
         options = at(field, :field_options)
-        return "field options" unless options.blank? || hashish?(options)
+        return 'field options' unless options.blank? || hashish?(options)
       end
     end
 
-    { "railscf_mail" => "mail settings", "railscf_message" => "response message",
-      "railscf_form_button" => "submit button label" }.each do |key, name|
+    { 'railscf_mail' => 'mail settings', 'railscf_message' => 'response message',
+      'railscf_form_button' => 'submit button label' }.each do |key, name|
       value = settings[key]
       return name unless value.nil? || hashish?(value)
     end
 
     MAIL_SCALAR_KEYS.each do |key|
-      value = at(settings["railscf_mail"], key)
+      value = at(settings['railscf_mail'], key)
       return key unless scalarish?(value)
       return key if oversized?(value)
     end
 
-    button = at(settings["railscf_form_button"], "name_button")
-    return "submit button label" unless scalarish?(button)
-    return "submit button label" if oversized?(button)
+    button = at(settings['railscf_form_button'], 'name_button')
+    return 'submit button label' unless scalarish?(button)
+    return 'submit button label' if oversized?(button)
 
-    each_leaf(settings["railscf_message"]) { |v| return "response message" if oversized?(v) }
+    each_leaf(settings['railscf_message']) { |v| return 'response message' if oversized?(v) }
 
     ATTRIBUTE_SETTING_KEYS.each do |key|
       return key.to_s unless settings[key].blank? || settings[key].is_a?(String)
@@ -451,7 +454,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # template of `<div title="[ci]">` puts the whole textarea inside an attribute and neither rule
   # describes the position. Returns the rule that refused it, or nil.
   def unsafe_default_value_rule(field)
-    value = at(field, "default_value")
+    value = at(field, 'default_value')
     if TEXTAREA_FIELD_TYPES.include?(at(field, :field_type).to_s)
       unsafe_textarea?(value) ? :textarea : nil
     else
@@ -497,27 +500,27 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # the value the author submitted.
   def first_malformed_structural_key(fields)
     fields.each do |field|
-      return "cid" unless at(field, :cid).to_s.match?(CID_FORMAT)
+      return 'cid' unless at(field, :cid).to_s.match?(CID_FORMAT)
 
       type = at(field, :field_type).to_s
-      return "field type" unless FIELD_TYPES.include?(type)
-      return "required flag" unless scalarish?(at(field, :required))
+      return 'field type' unless FIELD_TYPES.include?(type)
+      return 'required flag' unless scalarish?(at(field, :required))
 
       options = at(field, :field_options)
-      maxlength = at(options, "maxlength")
-      return "maxlength" if maxlength.present? && !maxlength.to_s.match?(/\A\d+\z/)
+      maxlength = at(options, 'maxlength')
+      return 'maxlength' if maxlength.present? && !maxlength.to_s.match?(/\A\d+\z/)
 
       option_list = Array(at(options, :options))
-      return "option count" if option_list.size > MAX_OPTIONS_PER_FIELD
+      return 'option count' if option_list.size > MAX_OPTIONS_PER_FIELD
 
       # A field type that renders a list of choices needs at least one, and every option needs a
       # label: `options.each` and `op[:label].translate` are both unguarded in the renderer, so
       # either omission is a NoMethodError on every visit, from a save the author was told succeeded.
-      return "options" if OPTION_FIELD_TYPES.include?(type) && option_list.empty?
+      return 'options' if OPTION_FIELD_TYPES.include?(type) && option_list.empty?
 
       option_list.each do |option|
-        return "option label" unless hashish?(option) && at(option, "label").is_a?(String)
-        return "option label" if oversized?(at(option, "label"))
+        return 'option label' unless hashish?(option) && at(option, 'label').is_a?(String)
+        return 'option label' if oversized?(at(option, 'label'))
       end
 
       # Every substituted slot must be a string for the same reason: `["<div>[ci]</div>"].to_s` is
@@ -536,8 +539,8 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
       # value's HTML context depend on who wrote the template rather than on what the value is, and
       # `field_attributes` that is not a JSON object reaches `{id: cid}.merge(...)` in the renderer
       # and raises TypeError on every public page.
-      return "template" if placeholder_in_tag?(at(options, "template"))
-      return "field_attributes" if malformed_attribute_json?(at(options, "field_attributes"))
+      return 'template' if placeholder_in_tag?(at(options, 'template'))
+      return 'field_attributes' if malformed_attribute_json?(at(options, 'field_attributes'))
     end
 
     nil
@@ -711,15 +714,13 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # carry no double quote by the time this runs.
   def dangerous_url?(value)
     decoded = Loofah.html5_fragment(%(<a href="#{value}">)).at_css('a')&.[]('href').to_s
-    decoded.gsub(URL_IGNORABLE_CHARS, "").match?(DANGEROUS_URL_SCHEME)
+    decoded.gsub(URL_IGNORABLE_CHARS, '').match?(DANGEROUS_URL_SCHEME)
   end
 
   def set_form
-    begin
-      @form = current_site.contact_forms.find_by_id(params[:id])
-    rescue
-      flash[:error] = "Error form class"
-      redirect_to cama_admin_path
-    end
+    @form = current_site.contact_forms.find_by(id: params[:id])
+  rescue StandardError
+    flash[:error] = 'Error form class'
+    redirect_to cama_admin_path
   end
 end

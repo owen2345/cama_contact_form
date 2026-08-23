@@ -1,70 +1,73 @@
 module Plugins::CamaContactForm::MainHelper
   include Recaptcha::Adapters::ViewMethods
   def self.included(klass)
-    klass.helper_method [:cama_form_element_bootstrap_object, :cama_form_shortcode] rescue "" # here your methods accessible from views
+    klass.helper_method %i[cama_form_element_bootstrap_object cama_form_shortcode]
+  rescue StandardError
+    ''
+    # here your methods accessible from views
   end
 
   def contact_form_on_export(args)
-    args[:obj][:plugins][self_plugin_key] = JSON.parse(current_site.contact_forms.to_json(:include => [:responses]))
+    args[:obj][:plugins][self_plugin_key] = JSON.parse(current_site.contact_forms.to_json(include: [:responses]))
   end
 
   def contact_form_on_import(args)
     plugins = args[:data][:plugins]
-    if plugins[self_plugin_key.to_sym].present?
-      plugins[self_plugin_key.to_sym].each do |contact|
-        unless current_site.contact_forms.where(slug: contact[:slug]).first.present?
-          sba_data = ActionController::Parameters.new(contact)
-          contact_new = current_site.contact_forms.new(sba_data.permit(:name, :slug, :count, :description, :value, :settings))
-          if contact_new.save!
-            if contact[:get_field_groups] # save group fields
-              save_field_group(contact_new, contact[:get_field_groups])
-            end
-            save_field_values(contact_new, contact[:field_values])
+    return if plugins[self_plugin_key.to_sym].blank?
 
-            if contact[:responses].present? # saving responses for this contact
-              contact[:responses].each do |response|
-                sba_data = ActionController::Parameters.new(response)
-                contact_new.responses.create!(sba_data.permit(:name, :slug, :count, :description, :value, :settings))
-              end
-            end
-            args[:messages] << "Saved Plugin Contact Form: #{contact_new.name}"
-          end
+    plugins[self_plugin_key.to_sym].each do |contact|
+      next if current_site.contact_forms.where(slug: contact[:slug]).first.present?
+
+      sba_data = ActionController::Parameters.new(contact)
+      contact_new = current_site.contact_forms.new(sba_data.permit(:name, :slug, :count, :description, :value,
+                                                                   :settings))
+      next unless contact_new.save!
+
+      save_field_group(contact_new, contact[:get_field_groups]) if contact[:get_field_groups] # save group fields
+      save_field_values(contact_new, contact[:field_values])
+
+      if contact[:responses].present? # saving responses for this contact
+        contact[:responses].each do |response|
+          sba_data = ActionController::Parameters.new(response)
+          contact_new.responses.create!(sba_data.permit(:name, :slug, :count, :description, :value, :settings))
         end
       end
+      args[:messages] << "Saved Plugin Contact Form: #{contact_new.name}"
     end
   end
 
   # here all actions on plugin destroying
   # plugin: plugin model
-  def contact_form_on_destroy(plugin)
-
-  end
+  def contact_form_on_destroy(plugin); end
 
   # here all actions on going to active
   # you can run sql commands like this:
   # results = ActiveRecord::Base.connection.execute(query);
   # plugin: plugin model
-  def contact_form_on_active(plugin)
-
-  end
+  def contact_form_on_active(plugin); end
 
   # here all actions on going to inactive
   # plugin: plugin model
-  def contact_form_on_inactive(plugin)
-
-  end
+  def contact_form_on_inactive(plugin); end
 
   def contact_form_admin_before_load
-    admin_menu_append_menu_item("settings", {icon: "envelope-o", title: t('plugins.cama_contact_form.title', default: 'Contact Form'), url: admin_plugins_cama_contact_form_admin_forms_path, datas: "data-intro='This plugin permit you to create you contact forms with desired fields and paste your short_code in any content.' data-position='right'"})
+    admin_menu_append_menu_item(
+      'settings',
+      { icon: 'envelope-o',
+        title: t('plugins.cama_contact_form.title', default: 'Contact Form'),
+        url: admin_plugins_cama_contact_form_admin_forms_path,
+        datas: "data-intro='This plugin permit you to create you contact forms with desired fields " \
+               "and paste your short_code in any content.' data-position='right'" }
+    )
   end
 
   def contact_form_app_before_load
-    shortcode_add('forms', plugin_view("forms_shorcode"), "This is a shortocode for contact form to permit you to put your contact form in any content. Sample: [forms slug='key-for-my-form']")
+    shortcode_add('forms', plugin_view('forms_shorcode'),
+                  'This is a shortocode for contact form to permit you to put your contact form in any ' \
+                  "content. Sample: [forms slug='key-for-my-form']")
   end
 
-  def contact_form_front_before_load
-
-  end
+  def contact_form_front_before_load; end
 
   # ============== HTML ==================
   # This returns the format of the plugin shortcode.
@@ -123,12 +126,22 @@ module Plugins::CamaContactForm::MainHelper
 
   # form contact with css bootstrap
   def cama_form_element_bootstrap_object(form, object, values)
-    html = ""
+    html = ''
     object.each do |ob|
       ob[:label] = ob[:label].to_s.translate
       ob[:description] = ob[:description].to_s.translate
-      r = {field: ob, form: form, template: (ob[:field_options][:template].present? ? ob[:field_options][:template] :  Plugins::CamaContactForm::CamaContactForm::field_template), custom_class: (ob[:field_options][:field_class] rescue nil), custom_attrs: {id: ob[:cid] }.merge((JSON.parse(ob[:field_options][:field_attributes]) rescue {})) }
-      hooks_run("contact_form_item_render", r)
+      template = ob[:field_options][:template].presence ||
+                 Plugins::CamaContactForm::CamaContactForm.field_template
+      r = { field: ob, form: form, template: template, custom_class: begin
+        ob[:field_options][:field_class]
+      rescue StandardError
+        nil
+      end, custom_attrs: { id: ob[:cid] }.merge(begin
+        JSON.parse(ob[:field_options][:field_attributes])
+      rescue StandardError
+        {}
+      end) }
+      hooks_run('contact_form_item_render', r)
       ob = r[:field]
       ob[:custom_class] = r[:custom_class]
       ob[:custom_attrs] = r[:custom_attrs]
@@ -140,7 +153,7 @@ module Plugins::CamaContactForm::MainHelper
       f_name = "fields[#{ob[:cid]}]"
       cid = ob[:cid].to_sym
 
-      temp2 = ""
+      temp2 = ''
 
       # Both a redisplayed submission and the author's default_value render verbatim: each was
       # validated before it could be stored or stashed, so neither can carry anything the submitter
@@ -148,41 +161,48 @@ module Plugins::CamaContactForm::MainHelper
       current_value = values[cid] || ob[:default_value].to_s.translate
 
       case ob[:field_type].to_s
-        when 'paragraph','textarea'
-          temp2 = "<textarea #{cf_attrs(ob[:custom_attrs])} name=\"#{f_name}\" maxlength=\"#{field_options[:maxlength] || 500}\"  class=\"#{ob[:custom_class].presence || 'form-control'}  \">#{current_value}</textarea>"
-        when 'radio'
-          temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], ob[:field_type],values)
-        when 'checkboxes'
-          temp2=  cama_form_select_multiple_bootstrap(ob, ob[:label], "checkbox",values)
-        when 'submit'
-          temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type=\"#{ob[:field_type]}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
-        when 'button'
-          temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type='button' name=\"#{f_name}\" class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
-        when 'reset_button'
-          temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type='reset' name=\"#{f_name}\" class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
-        when 'text', 'website', 'email'
-          class_type = ""
-          class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="website"
-          class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type]=="email"
-          temp2 = "<input #{cf_attrs(ob[:custom_attrs])} type=\"#{ob[:field_type]}\" value=\"#{current_value}\" name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'form-control'} #{class_type}\">"
-        when 'captcha'
-          if form.recaptcha_enabled?
-            temp2 = recaptcha_tags
-          else
-            # The one field type whose attributes do not go through cf_attrs: cama_captcha_tag builds
-            # its markup with Rails' `tag`, which escapes values and rewrites malformed names. That is
-            # a documented exception to this file's verbatim contract rather than a gap in it -- `tag`
-            # is the stricter of the two, so a trusted author's quoted value is escaped here and a
-            # malformed attribute name is mangled rather than emitted. Left as it is deliberately:
-            # reproducing cf_attrs would mean rebuilding the helper's output by string surgery, which
-            # is a real risk of breaking the captcha for a consistency gain and no security gain.
-            temp2 = cama_captcha_tag(5, {}, {class: "#{ob[:custom_class].presence || 'form-control'} field-captcha required"}.merge(ob[:custom_attrs]))
-          end
-        when 'file'
-          temp2 = "<input multiple=\"multiple\" type=\"file\" value=\"\" name=\"#{f_name}[]\" #{cf_attrs(ob[:custom_attrs])} class=\"#{ob[:custom_class].presence || 'form-control'}\">"
-        when 'dropdown'
-          temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], "select",values)
+      when 'paragraph', 'textarea'
+        temp2 = "<textarea #{cf_attrs(ob[:custom_attrs])} name=\"#{f_name}\" " \
+                "maxlength=\"#{field_options[:maxlength] || 500}\"  " \
+                "class=\"#{ob[:custom_class].presence || 'form-control'}  \">#{current_value}</textarea>"
+      when 'radio'
+        temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], ob[:field_type], values)
+      when 'checkboxes'
+        temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], 'checkbox', values)
+      when 'submit'
+        temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type=\"#{ob[:field_type]}\" name=\"#{f_name}\"  " \
+                "class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+      when 'button'
+        temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type='button' name=\"#{f_name}\" " \
+                "class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+      when 'reset_button'
+        temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type='reset' name=\"#{f_name}\" " \
+                "class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+      when 'text', 'website', 'email'
+        class_type = ''
+        class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type] == 'website'
+        class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type] == 'email'
+        temp2 = "<input #{cf_attrs(ob[:custom_attrs])} type=\"#{ob[:field_type]}\" value=\"#{current_value}\" " \
+                "name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'form-control'} #{class_type}\">"
+      when 'captcha'
+        if form.recaptcha_enabled?
+          temp2 = recaptcha_tags
         else
+          # The one field type whose attributes do not go through cf_attrs: cama_captcha_tag builds
+          # its markup with Rails' `tag`, which escapes values and rewrites malformed names. That is
+          # a documented exception to this file's verbatim contract rather than a gap in it -- `tag`
+          # is the stricter of the two, so a trusted author's quoted value is escaped here and a
+          # malformed attribute name is mangled rather than emitted. Left as it is deliberately:
+          # reproducing cf_attrs would mean rebuilding the helper's output by string surgery, which
+          # is a real risk of breaking the captcha for a consistency gain and no security gain.
+          captcha_class = "#{ob[:custom_class].presence || 'form-control'} field-captcha required"
+          temp2 = cama_captcha_tag(5, {}, { class: captcha_class }.merge(ob[:custom_attrs]))
+        end
+      when 'file'
+        temp2 = "<input multiple=\"multiple\" type=\"file\" value=\"\" name=\"#{f_name}[]\" " \
+                "#{cf_attrs(ob[:custom_attrs])} class=\"#{ob[:custom_class].presence || 'form-control'}\">"
+      when 'dropdown'
+        temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], 'select', values)
       end
       r[:template] = cf_substitute(r[:template],
                                    '[ci]' => temp2,
@@ -201,26 +221,35 @@ module Plugins::CamaContactForm::MainHelper
     options = (raw_options.is_a?(Hash) ? raw_options.values : Array(raw_options))
               .select { |op| op.is_a?(Hash) }
     include_other_option = ob[:field_options][:include_other_option]
-    other_input = ""
+    other_input = ''
 
     f_name = "fields[#{ob[:cid]}]"
     cid = ob[:cid].to_sym
-    html = ""
+    html = ''
 
     custom_class = ob[:custom_class].to_s
 
-    if type == "radio" || type == "checkbox"
-      other_input = (include_other_option)? "<div class=\"#{type} #{custom_class}\"> <label for=\"#{ob[:cid]}\"><input id=\"#{ob[:cid]}-other\" type=\"#{type}\" name=\"#{title.downcase}[]\" class=\"\">Other <input type=\"text\" /></label></div>" : " "
+    if %w[radio checkbox].include?(type)
+      other_input = if include_other_option
+                      "<div class=\"#{type} #{custom_class}\"> <label for=\"#{ob[:cid]}\">" \
+                      "<input id=\"#{ob[:cid]}-other\" type=\"#{type}\" name=\"#{title.downcase}[]\" class=\"\">" \
+                      'Other <input type="text" /></label></div>'
+                    else
+                      ' '
+                    end
     else
       html = "<select #{cf_attrs(ob[:custom_attrs])} name=\"#{f_name}\" class=\"#{custom_class}\">"
     end
 
     options.each do |op|
       label = op[:label].to_s.translate
-      if type == "radio" || type == "checkbox"
+      if %w[radio checkbox].include?(type)
+        input_tag = "<input #{cf_attrs(ob[:custom_attrs])} type=\"#{type}\" " \
+                    "#{'checked' if op[:checked].to_s.cama_true?} name=\"#{f_name}[]\" " \
+                    "class=\"\" value=\"#{label.downcase}\">"
         html += "<div class=\"#{type} #{custom_class}\">
                     <label for=\"#{ob[:cid]}\">
-                      <input #{cf_attrs(ob[:custom_attrs])} type=\"#{type}\" #{'checked' if op[:checked].to_s.cama_true?} name=\"#{f_name}[]\" class=\"\" value=\"#{label.downcase}\">
+                      #{input_tag}
                       #{label}
                     </label>
                   </div>"
@@ -229,15 +258,16 @@ module Plugins::CamaContactForm::MainHelper
         # so the emitted value and the `selected` comparison cannot drift apart -- but only here:
         # radio and checkbox have always submitted the plain lowercased label, and unifying the two
         # would silently change what every existing response row is compared against.
-        option_value = label.downcase.gsub(" ", "_")
-        html += "<option  value=\"#{option_value}\" #{"selected" if option_value == values[cid] || op[:checked].to_s.cama_true? } >#{label}</option>"
+        option_value = label.downcase.tr(' ', '_')
+        html += "<option  value=\"#{option_value}\" " \
+                "#{'selected' if option_value == values[cid] || op[:checked].to_s.cama_true?} >#{label}</option>"
       end
     end
 
-    if type == "radio" || type == "checkbox"
-      html += other_input
-    else
-      html += " </select>"
-    end
+    html += if %w[radio checkbox].include?(type)
+              other_input
+            else
+              ' </select>'
+            end
   end
 end
