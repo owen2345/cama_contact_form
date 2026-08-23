@@ -14,4 +14,7 @@ gemspec
 # gem 'byebug', group: [:development, :test]
 
 gem 'sprockets-rails', '>= 3.5.2'
-gem 'camaleon_cms'
+# Floor: the plugin's security model requires a core newer than 2.9.2 (the upload content scanner and
+# the save-time gate), so tests must never resolve to the vulnerable 2.9.2 (audit CF-8). The lockfile
+# is gitignored for a gem, so this floor is where the requirement is documented and enforced.
+gem 'camaleon_cms', '>= 2.9.3'

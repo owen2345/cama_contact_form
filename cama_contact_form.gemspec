@@ -21,4 +21,11 @@ Gem::Specification.new do |s|
 
   s.add_dependency "rails"
   s.add_dependency "recaptcha", ">= 5.0"
+
+  # Test harness: a camaleon_cms-backed dummy Rails app booted under RSpec (see spec/). These are
+  # dev-only; the packaged gem (s.files above) ships none of spec/.
+  s.add_development_dependency "rspec-rails"
+  s.add_development_dependency "factory_bot_rails"
+  s.add_development_dependency "faker"
+  s.add_development_dependency "sqlite3"
 end

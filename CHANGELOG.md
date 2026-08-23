@@ -11,6 +11,15 @@ authors. This release declares the plugin's `forms` shortcode name to camaleon-c
 `[forms ...]` in content. The declaration is guarded — nothing changes against camaleon-cms versions
 predating the registry — and the shortcode's rendering is unchanged.
 
+### Testing: the plugin now has its own RSpec suite
+
+Adds a camaleon_cms-backed dummy Rails app under `spec/` so the plugin can be tested in its own
+repository (booting a real Camaleon host) instead of only in camaleon-cms. Floors the development
+dependency on `camaleon_cms` at `>= 2.9.3`, so tests always run against a core that carries the
+upload content scanner and the save-time gate — closing audit finding CF-8, where the development
+lockfile pinned the vulnerable 2.9.2. Development/CI only; the packaged gem is unchanged.
+[#PLACEHOLDER](https://github.com/owen2345/cama_contact_form/pull/PLACEHOLDER).
+
 ## 0.1.12
 
 Two independent changes ship together. Each section links its PR — the reasoning, the exploits and
