@@ -13,7 +13,7 @@ exception; development dependencies move from the gemspec to the Gemfile; and `N
 `private`, in-loop array literals extracted to constants, a duplicate `each_leaf` branch folded, a
 hardcoded flash string moved to `t(...)`). `Rails/InverseOf` (the self-referential `has_many`) and
 `Gemspec/RequireMFA` are the only added exemptions, each with a documented reason. Development/CI
-only; the packaged gem is unchanged. [#PR](https://github.com/owen2345/cama_contact_form/pull/PR).
+only; the packaged gem is unchanged. [#74](https://github.com/owen2345/cama_contact_form/pull/74).
 
 ### Testing: the contact-form specs now live with the plugin
 
