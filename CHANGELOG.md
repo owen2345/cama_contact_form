@@ -28,7 +28,7 @@ across the two. Existing offences in the legacy code are grandfathered into `.ru
 fixed as files are touched; new code is held to the full config. `Gemfile.lock` is now committed, so
 the exact gem versions the suite runs against are known and reproducible — which also makes CI's
 `bundler-cache` effective; a RuboCop result cache is added too. Development/CI only; the packaged gem
-is unchanged. [#PLACEHOLDER](https://github.com/owen2345/cama_contact_form/pull/PLACEHOLDER).
+is unchanged. [#72](https://github.com/owen2345/cama_contact_form/pull/72).
 
 ## 0.1.12
 
