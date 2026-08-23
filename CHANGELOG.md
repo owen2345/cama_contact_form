@@ -18,7 +18,7 @@ repository (booting a real Camaleon host) instead of only in camaleon-cms. Floor
 dependency on `camaleon_cms` at `>= 2.9.3`, so tests always run against a core that carries the
 upload content scanner and the save-time gate — closing audit finding CF-8, where the development
 lockfile pinned the vulnerable 2.9.2. Development/CI only; the packaged gem is unchanged.
-[#PLACEHOLDER](https://github.com/owen2345/cama_contact_form/pull/PLACEHOLDER).
+[#71](https://github.com/owen2345/cama_contact_form/pull/71).
 
 ## 0.1.12
 
