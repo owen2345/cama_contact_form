@@ -380,6 +380,19 @@ RSpec.describe 'Security: contact form gate soundness' do
 
       expect(form.the_settings[:railscf_mail][:after_html]).to eq('<a title="Read more">Hover</a>')
     end
+
+    # A *literal* `<tag` in a kept attribute is refused too, not only the entity-encoded form: the
+    # parser leaves `x<b` on the node, where a data-html sink would inject it as markup. The
+    # safe-list comparison is blind to it -- `a`/`title` are both kept and `<b"` is not a start tag
+    # `markup_dropped?` counts -- so only the attribute-markup check catches it. Entity-escaping does
+    # not help (it decodes back to the same value on the node), so the contract is a blanket refusal
+    # of `<` + name in an attribute the scrubber keeps.
+    it 'refuses a literal `<tag` in a kept attribute' do
+      save(railscf_mail: { to: 'a@b.c', subject: 's', body: 'b', after_html: '<a title="x<b">Hover</a>' },
+           fields: field)
+
+      expect(form.the_settings[:railscf_mail]).to be_blank
+    end
   end
 
   # --- the gate must not refuse what authors actually write -----------------
