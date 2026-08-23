@@ -1,0 +1,94 @@
+inherit_from: .rubocop_todo.yml
+
+plugins:
+  - rubocop-capybara
+  - rubocop-factory_bot
+  - rubocop-performance
+  - rubocop-rails
+  - rubocop-rake
+  - rubocop-rspec
+  - rubocop-rspec_rails
+
+AllCops:
+  Exclude:
+    - bin/**/* # Exclude executable scripts
+    - db/**/*
+    - spec/dummy/**/* # Generated camaleon_cms-backed dummy app (incl. the copied default theme)
+    - /**/vendor/**/* # Exclude downloaded gem code in CI
+  NewCops: disable
+  SuggestExtensions: false
+  TargetRailsVersion: 6.1
+  TargetRubyVersion: 3.0 # matches the gemspec's required_ruby_version
+
+Layout/MultilineMethodCallIndentation:
+  Enabled: true
+  EnforcedStyle: aligned
+
+Lint/MissingSuper:
+  Enabled: false
+
+Metrics/AbcSize:
+  Exclude:
+    - spec/**/*
+
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+    - config/routes.rb
+
+Metrics/MethodLength:
+  Exclude:
+    - spec/**/*
+
+Rails/Delegate:
+  Enabled: false
+
+RSpec/AnyInstance:
+  Enabled: false
+
+RSpec/BeEql:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/InstanceVariable:
+  Enabled: false
+
+RSpec/MessageSpies:
+  Enabled: true
+  EnforcedStyle: receive
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/NestedGroups:
+  Enabled: true
+  Max: 5
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/SpecFilePathSuffix:
+  Enabled: true
+
+Security/MarshalLoad:
+  Exclude:
+    - spec/**/*
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/MixinUsage:
+  Exclude:
+    - spec/**/*
+
+Style/NumericPredicate:
+  Enabled: true
+  EnforcedStyle: comparison

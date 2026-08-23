@@ -28,4 +28,14 @@ Gem::Specification.new do |s|
   s.add_development_dependency "factory_bot_rails"
   s.add_development_dependency "faker"
   s.add_development_dependency "sqlite3"
+
+  # Linting -- same rubocop plugin set as camaleon_cms, so style stays consistent across the two.
+  s.add_development_dependency "rubocop"
+  s.add_development_dependency "rubocop-capybara"
+  s.add_development_dependency "rubocop-factory_bot"
+  s.add_development_dependency "rubocop-performance"
+  s.add_development_dependency "rubocop-rails"
+  s.add_development_dependency "rubocop-rake"
+  s.add_development_dependency "rubocop-rspec"
+  s.add_development_dependency "rubocop-rspec_rails"
 end
