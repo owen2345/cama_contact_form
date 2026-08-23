@@ -1,11 +1,19 @@
+# frozen_string_literal: true
+
+# A contact form and, through `parent_id`, its stored response rows, scoped to a site.
 class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   include Plugins::CamaContactForm::MainHelper
+
   self.table_name = 'plugins_contact_forms'
   belongs_to :site, class_name: 'CamaleonCms::Site'
   # attr_accessible :site_id, :name, :description, :count, :slug, :value, :settings, :parent_id
 
+  # A self-referential parent/child: a form and its stored response rows. There is no reciprocal
+  # `belongs_to :parent` to point `inverse_of` at, so the cop is disabled for this association only.
+  # rubocop:disable Rails/InverseOf
   has_many :responses, class_name: 'Plugins::CamaContactForm::CamaContactForm', foreign_key: :parent_id,
                        dependent: :destroy
+  # rubocop:enable Rails/InverseOf
   validates :name, presence: true
   validates :slug, uniqueness: { scope: :site_id }
 
@@ -99,6 +107,6 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
     file_cids
       .flat_map { |cid| response_data[cid] }
       .map { |file| file.sub Rails.application.routes.url_helpers.cama_root_url, Rails.public_path.to_s }
-      .each { |file| File.delete file if File.exist? file }
+      .each { |file| FileUtils.rm_f file }
   end
 end

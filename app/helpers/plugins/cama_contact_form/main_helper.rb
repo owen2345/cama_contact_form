@@ -1,5 +1,9 @@
+# frozen_string_literal: true
+
+# View helpers that render a form's fields to Bootstrap markup for the `[forms]` shortcode.
 module Plugins::CamaContactForm::MainHelper
   include Recaptcha::Adapters::ViewMethods
+
   def self.included(klass)
     klass.helper_method %i[cama_form_element_bootstrap_object cama_form_shortcode]
   rescue StandardError
@@ -127,63 +131,63 @@ module Plugins::CamaContactForm::MainHelper
   # form contact with css bootstrap
   def cama_form_element_bootstrap_object(form, object, values)
     html = ''
-    object.each do |ob|
-      ob[:label] = ob[:label].to_s.translate
-      ob[:description] = ob[:description].to_s.translate
-      template = ob[:field_options][:template].presence ||
+    object.each do |obj|
+      obj[:label] = obj[:label].to_s.translate
+      obj[:description] = obj[:description].to_s.translate
+      template = obj[:field_options][:template].presence ||
                  Plugins::CamaContactForm::CamaContactForm.field_template
-      r = { field: ob, form: form, template: template, custom_class: begin
-        ob[:field_options][:field_class]
+      r = { field: obj, form: form, template: template, custom_class: begin
+        obj[:field_options][:field_class]
       rescue StandardError
         nil
-      end, custom_attrs: { id: ob[:cid] }.merge(begin
-        JSON.parse(ob[:field_options][:field_attributes])
+      end, custom_attrs: { id: obj[:cid] }.merge(begin
+        JSON.parse(obj[:field_options][:field_attributes])
       rescue StandardError
         {}
       end) }
       hooks_run('contact_form_item_render', r)
-      ob = r[:field]
-      ob[:custom_class] = r[:custom_class]
-      ob[:custom_attrs] = r[:custom_attrs]
+      obj = r[:field]
+      obj[:custom_class] = r[:custom_class]
+      obj[:custom_attrs] = r[:custom_attrs]
       # `cama_true?`, not `to_bool`: `to_bool` raises ArgumentError on anything outside its two
       # patterns, so a stored `required` of `maybe` was a 500 on every visit to the page.
-      ob[:custom_attrs][:required] = 'true' if ob[:required].to_s.cama_true?
-      field_options = ob[:field_options]
-      for_name = ob[:label].to_s
-      f_name = "fields[#{ob[:cid]}]"
-      cid = ob[:cid].to_sym
+      obj[:custom_attrs][:required] = 'true' if obj[:required].to_s.cama_true?
+      field_options = obj[:field_options]
+      for_name = obj[:label].to_s
+      f_name = "fields[#{obj[:cid]}]"
+      cid = obj[:cid].to_sym
 
       temp2 = ''
 
       # Both a redisplayed submission and the author's default_value render verbatim: each was
       # validated before it could be stored or stashed, so neither can carry anything the submitter
       # was not permitted to write.
-      current_value = values[cid] || ob[:default_value].to_s.translate
+      current_value = values[cid] || obj[:default_value].to_s.translate
 
-      case ob[:field_type].to_s
+      case obj[:field_type].to_s
       when 'paragraph', 'textarea'
-        temp2 = "<textarea #{cf_attrs(ob[:custom_attrs])} name=\"#{f_name}\" " \
+        temp2 = "<textarea #{cf_attrs(obj[:custom_attrs])} name=\"#{f_name}\" " \
                 "maxlength=\"#{field_options[:maxlength] || 500}\"  " \
-                "class=\"#{ob[:custom_class].presence || 'form-control'}  \">#{current_value}</textarea>"
+                "class=\"#{obj[:custom_class].presence || 'form-control'}  \">#{current_value}</textarea>"
       when 'radio'
-        temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], ob[:field_type], values)
+        temp2 = cama_form_select_multiple_bootstrap(obj, obj[:label], obj[:field_type], values)
       when 'checkboxes'
-        temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], 'checkbox', values)
+        temp2 = cama_form_select_multiple_bootstrap(obj, obj[:label], 'checkbox', values)
       when 'submit'
-        temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type=\"#{ob[:field_type]}\" name=\"#{f_name}\"  " \
-                "class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+        temp2 = "<button #{cf_attrs(obj[:custom_attrs])} type=\"#{obj[:field_type]}\" name=\"#{f_name}\"  " \
+                "class=\"#{obj[:custom_class].presence || 'btn btn-default'}\">#{obj[:label]}</button>"
       when 'button'
-        temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type='button' name=\"#{f_name}\" " \
-                "class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+        temp2 = "<button #{cf_attrs(obj[:custom_attrs])} type='button' name=\"#{f_name}\" " \
+                "class=\"#{obj[:custom_class].presence || 'btn btn-default'}\">#{obj[:label]}</button>"
       when 'reset_button'
-        temp2 = "<button #{cf_attrs(ob[:custom_attrs])} type='reset' name=\"#{f_name}\" " \
-                "class=\"#{ob[:custom_class].presence || 'btn btn-default'}\">#{ob[:label]}</button>"
+        temp2 = "<button #{cf_attrs(obj[:custom_attrs])} type='reset' name=\"#{f_name}\" " \
+                "class=\"#{obj[:custom_class].presence || 'btn btn-default'}\">#{obj[:label]}</button>"
       when 'text', 'website', 'email'
         class_type = ''
-        class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type] == 'website'
-        class_type = "railscf-field-#{ob[:field_type]}" if ob[:field_type] == 'email'
-        temp2 = "<input #{cf_attrs(ob[:custom_attrs])} type=\"#{ob[:field_type]}\" value=\"#{current_value}\" " \
-                "name=\"#{f_name}\"  class=\"#{ob[:custom_class].presence || 'form-control'} #{class_type}\">"
+        class_type = "railscf-field-#{obj[:field_type]}" if obj[:field_type] == 'website'
+        class_type = "railscf-field-#{obj[:field_type]}" if obj[:field_type] == 'email'
+        temp2 = "<input #{cf_attrs(obj[:custom_attrs])} type=\"#{obj[:field_type]}\" value=\"#{current_value}\" " \
+                "name=\"#{f_name}\"  class=\"#{obj[:custom_class].presence || 'form-control'} #{class_type}\">"
       when 'captcha'
         if form.recaptcha_enabled?
           temp2 = recaptcha_tags
@@ -195,14 +199,14 @@ module Plugins::CamaContactForm::MainHelper
           # malformed attribute name is mangled rather than emitted. Left as it is deliberately:
           # reproducing cf_attrs would mean rebuilding the helper's output by string surgery, which
           # is a real risk of breaking the captcha for a consistency gain and no security gain.
-          captcha_class = "#{ob[:custom_class].presence || 'form-control'} field-captcha required"
-          temp2 = cama_captcha_tag(5, {}, { class: captcha_class }.merge(ob[:custom_attrs]))
+          captcha_class = "#{obj[:custom_class].presence || 'form-control'} field-captcha required"
+          temp2 = cama_captcha_tag(5, {}, { class: captcha_class }.merge(obj[:custom_attrs]))
         end
       when 'file'
         temp2 = "<input multiple=\"multiple\" type=\"file\" value=\"\" name=\"#{f_name}[]\" " \
-                "#{cf_attrs(ob[:custom_attrs])} class=\"#{ob[:custom_class].presence || 'form-control'}\">"
+                "#{cf_attrs(obj[:custom_attrs])} class=\"#{obj[:custom_class].presence || 'form-control'}\">"
       when 'dropdown'
-        temp2 = cama_form_select_multiple_bootstrap(ob, ob[:label], 'select', values)
+        temp2 = cama_form_select_multiple_bootstrap(obj, obj[:label], 'select', values)
       end
       r[:template] = cf_substitute(r[:template],
                                    '[ci]' => temp2,
@@ -213,42 +217,45 @@ module Plugins::CamaContactForm::MainHelper
     html
   end
 
-  def cama_form_select_multiple_bootstrap(ob, title, type, values)
+  # Field control types rendered as a group of <input> tags rather than a <select>.
+  RADIO_CHECKBOX_CONTROL_TYPES = %w[radio checkbox].freeze
+
+  def cama_form_select_multiple_bootstrap(obj, title, type, values)
     # Defensive, because a form saved before the gate required a well-formed option list carries
     # whatever it carries -- and `nil.each`, or `op[:label]` on a String, is a 500 on every visit to
     # the page. `Array()` alone will not do: on a Hash it yields key/value pairs.
-    raw_options = ob[:field_options][:options]
+    raw_options = obj[:field_options][:options]
     options = (raw_options.is_a?(Hash) ? raw_options.values : Array(raw_options))
-              .select { |op| op.is_a?(Hash) }
-    include_other_option = ob[:field_options][:include_other_option]
+              .grep(Hash)
+    include_other_option = obj[:field_options][:include_other_option]
     other_input = ''
 
-    f_name = "fields[#{ob[:cid]}]"
-    cid = ob[:cid].to_sym
+    f_name = "fields[#{obj[:cid]}]"
+    cid = obj[:cid].to_sym
     html = ''
 
-    custom_class = ob[:custom_class].to_s
+    custom_class = obj[:custom_class].to_s
 
-    if %w[radio checkbox].include?(type)
+    if RADIO_CHECKBOX_CONTROL_TYPES.include?(type)
       other_input = if include_other_option
-                      "<div class=\"#{type} #{custom_class}\"> <label for=\"#{ob[:cid]}\">" \
-                      "<input id=\"#{ob[:cid]}-other\" type=\"#{type}\" name=\"#{title.downcase}[]\" class=\"\">" \
-                      'Other <input type="text" /></label></div>'
+                      "<div class=\"#{type} #{custom_class}\"> <label for=\"#{obj[:cid]}\">" \
+                        "<input id=\"#{obj[:cid]}-other\" type=\"#{type}\" name=\"#{title.downcase}[]\" class=\"\">" \
+                        'Other <input type="text" /></label></div>'
                     else
                       ' '
                     end
     else
-      html = "<select #{cf_attrs(ob[:custom_attrs])} name=\"#{f_name}\" class=\"#{custom_class}\">"
+      html = "<select #{cf_attrs(obj[:custom_attrs])} name=\"#{f_name}\" class=\"#{custom_class}\">"
     end
 
     options.each do |op|
       label = op[:label].to_s.translate
-      if %w[radio checkbox].include?(type)
-        input_tag = "<input #{cf_attrs(ob[:custom_attrs])} type=\"#{type}\" " \
+      if RADIO_CHECKBOX_CONTROL_TYPES.include?(type)
+        input_tag = "<input #{cf_attrs(obj[:custom_attrs])} type=\"#{type}\" " \
                     "#{'checked' if op[:checked].to_s.cama_true?} name=\"#{f_name}[]\" " \
                     "class=\"\" value=\"#{label.downcase}\">"
         html += "<div class=\"#{type} #{custom_class}\">
-                    <label for=\"#{ob[:cid]}\">
+                    <label for=\"#{obj[:cid]}\">
                       #{input_tag}
                       #{label}
                     </label>
@@ -264,7 +271,7 @@ module Plugins::CamaContactForm::MainHelper
       end
     end
 
-    html += if %w[radio checkbox].include?(type)
+    html += if RADIO_CHECKBOX_CONTROL_TYPES.include?(type)
               other_input
             else
               ' </select>'

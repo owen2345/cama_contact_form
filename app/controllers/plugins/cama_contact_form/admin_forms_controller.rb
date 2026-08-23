@@ -1,12 +1,17 @@
+# frozen_string_literal: true
+
+# Admin CRUD for a site's contact forms; refuses (never rewrites) authored markup an untrusted role
+# is not permitted to store.
 class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::PluginsAdminController
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern
+
   before_action :set_form, only: %w[show edit update destroy]
   add_breadcrumb I18n.t('plugins.cama_contact_form.title', default: 'Contact Form'),
                  :admin_plugins_cama_contact_form_admin_forms_path
 
   def index
-    @forms = current_site.contact_forms.where('parent_id is null').all
+    @forms = current_site.contact_forms.where(parent_id: nil).all
     @forms = @forms.paginate(page: params[:page], per_page: current_site.admin_per_page)
   end
 
@@ -15,6 +20,18 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   def edit
     add_breadcrumb I18n.t('plugins.cama_contact_form.edit_view', default: 'Edit contact form')
     render 'edit'
+  end
+
+  def create
+    @form = current_site.contact_forms.new(params.require(:plugins_cama_contact_form_cama_contact_form).permit(:name,
+                                                                                                               :slug))
+    if @form.save
+      flash[:notice] = t('.created', default: 'Created successfully').to_s
+      redirect_to action: :edit, id: @form.id
+    else
+      flash[:error] = @form.errors.full_messages.join(', ')
+      redirect_to action: :index
+    end
   end
 
   def update
@@ -55,18 +72,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     end
   end
 
-  def create
-    @form = current_site.contact_forms.new(params.require(:plugins_cama_contact_form_cama_contact_form).permit(:name,
-                                                                                                               :slug))
-    if @form.save
-      flash[:notice] = t('.created', default: 'Created successfully').to_s
-      redirect_to action: :edit, id: @form.id
-    else
-      flash[:error] = @form.errors.full_messages.join(', ')
-      redirect_to action: :index
-    end
-  end
-
   def destroy
     flash[:notice] = t('.deleted', default: 'Destroyed successfully').to_s if @form.destroy
     redirect_to action: :index
@@ -94,9 +99,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   def item_field
     render partial: 'item_field', locals: { field_type: params[:kind], cid: params[:cid] }
   end
-
-  # here add your custom functions
-  private
 
   # Values the author writes that reach the page verbatim. Nothing here is rewritten on save: an
   # author either holds :manage, :contact_form_unfiltered_html and their content is stored exactly as
@@ -187,6 +189,8 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # attribute the message never mentions.
   OPEN_ATTR_NAME = /\A(?:data|aria)-[a-zA-Z][-a-zA-Z0-9_.]*\z/
 
+  # A PermitScrubber that also keeps `data-`/`aria-` attributes, which the markup allowlist cannot
+  # enumerate.
   class MarkupScrubber < Rails::HTML::PermitScrubber
     private
 
@@ -237,6 +241,24 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   MAX_FIELDS = 200
   MAX_OPTIONS_PER_FIELD = 100
   MAX_GATED_VALUE_BYTES = 64 * 1024
+
+  # The messages the form editor offers, plus `invalid_content`, which the gate itself emits.
+  #
+  # Permitted rather than taken wholesale. `railscf_message` used to go straight from params into the
+  # gate, which runs a full Loofah parse per leaf -- so the number of parses was chosen by the caller.
+  # Permitting also stops unbounded junk being persisted into `settings.to_json`.
+  MESSAGE_KEYS = %w[mail_sent_ok mail_sent_ng validation_error invalid_required invalid_email
+                    captcha_not_match invalid_content].freeze
+
+  # Nothing below can find anything in a string holding none of these: the sanitizer and the
+  # serializer are both the identity function on it, so the two sides compare equal, and every tag
+  # and comment rule needs a `<`. `&` counts because entity decoding is a rewrite, the sentinels
+  # count because the comment shield deletes any that were supplied raw, and the control characters
+  # count because the HTML parser rewrites them. Tab, newline and carriage return round-trip
+  # unchanged and are deliberately absent.
+  SANITIZER_SIGNIFICANT = /[<>&\u{E000}\u{E001}\u0000-\u0008\u000B\u000C\u000E-\u001F\u{FFFE}\u{FFFF}]/
+
+  private
 
   # Mirrors CamaleonCms::Post#trusted_for_unfiltered_html?: read the acting user and site from
   # CurrentRequest and fail closed when either is missing, so saves from background jobs, rake tasks
@@ -376,27 +398,26 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     when :attribute
       t('.unsafe_attribute_rejected', field: rejected,
                                       default: 'The %{field} contains a double quote, which would break the HTML ' \
-                 'attribute it is ' \
-                 'written into. Nothing was saved. Remove it, or ask an administrator to grant the ' \
-                 '"Allow unfiltered HTML in contact forms" permission.')
+                                               'attribute it is written into. Nothing was saved. Remove it, or ask ' \
+                                               'an administrator to grant the "Allow unfiltered HTML in contact ' \
+                                               'forms" permission.')
     when :textarea
       t('.unsafe_textarea_rejected', field: rejected,
                                      default: 'The %{field} closes the text box it is written into. Nothing was ' \
-                 'saved. Remove ' \
-                 'the closing tag, or ask an administrator to grant the "Allow unfiltered HTML in ' \
-                 'contact forms" permission.')
+                                              'saved. Remove the closing tag, or ask an administrator to grant the ' \
+                                              '"Allow unfiltered HTML in contact forms" permission.')
     when :attributes_json
       t('.unsafe_attributes_rejected', field: rejected,
                                        default: 'The %{field} contains an attribute your role is not permitted to ' \
-                 'save: an event ' \
-                 'handler, an inline style, a script URL, or a malformed name. Nothing was saved. ' \
-                 'Remove it, or ask an administrator to grant the "Allow unfiltered HTML in contact ' \
-                 'forms" permission.')
+                                                'save: an event handler, an inline style, a script URL, or a ' \
+                                                'malformed name. Nothing was saved. Remove it, or ask an ' \
+                                                'administrator to grant the "Allow unfiltered HTML in contact forms" ' \
+                                                'permission.')
     else
       t('.unfiltered_html_rejected', field: rejected,
                                      default: 'The %{field} contains HTML that your role is not permitted to save. ' \
-                 'Nothing was saved. Remove it, or ask an administrator to grant the ' \
-                 '"Allow unfiltered HTML in contact forms" permission.')
+                                              'Nothing was saved. Remove it, or ask an administrator to grant the ' \
+                                              '"Allow unfiltered HTML in contact forms" permission.')
     end
   end
 
@@ -462,14 +483,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     end
   end
 
-  # The messages the form editor offers, plus `invalid_content`, which the gate itself emits.
-  #
-  # Permitted rather than taken wholesale. `railscf_message` used to go straight from params into the
-  # gate, which runs a full Loofah parse per leaf -- so the number of parses was chosen by the caller.
-  # Permitting also stops unbounded junk being persisted into `settings.to_json`.
-  MESSAGE_KEYS = %w[mail_sent_ok mail_sent_ng validation_error invalid_required invalid_email
-                    captcha_not_match invalid_content].freeze
-
   def permitted_messages
     messages = params[:railscf_message]
     return messages unless messages.respond_to?(:permit)
@@ -489,8 +502,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     return enum_for(:each_leaf, value) unless block
 
     case value
-    when ActionController::Parameters then value.each_value { |v| each_leaf(v, &block) }
-    when Hash then value.each_value { |v| each_leaf(v, &block) }
+    when ActionController::Parameters, Hash then value.each_value { |v| each_leaf(v, &block) }
     when Array then value.each { |v| each_leaf(v, &block) }
     else yield value
     end
@@ -563,14 +575,6 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   def unsafe_markup?(value)
     rendered_forms(value).any? { |form| unsafe_markup_form?(form) }
   end
-
-  # Nothing below can find anything in a string holding none of these: the sanitizer and the
-  # serializer are both the identity function on it, so the two sides compare equal, and every tag
-  # and comment rule needs a `<`. `&` counts because entity decoding is a rewrite, the sentinels
-  # count because the comment shield deletes any that were supplied raw, and the control characters
-  # count because the HTML parser rewrites them. Tab, newline and carriage return round-trip
-  # unchanged and are deliberately absent.
-  SANITIZER_SIGNIFICANT = /[<>&\u{E000}\u{E001}\u0000-\u0008\u000B\u000C\u000E-\u001F\u{FFFE}\u{FFFF}]/
 
   # The sanitizer comparison alone is blind in two directions, because it only sees what the safe
   # list removed from a fragment the parser was willing to build:
@@ -720,7 +724,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   def set_form
     @form = current_site.contact_forms.find_by(id: params[:id])
   rescue StandardError
-    flash[:error] = 'Error form class'
+    flash[:error] = t('.error_form_class', default: 'Error form class')
     redirect_to cama_admin_path
   end
 end

@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# Public endpoint that receives a form submission (`save_form`) and redisplays the form on refusal.
 class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFrontController
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern

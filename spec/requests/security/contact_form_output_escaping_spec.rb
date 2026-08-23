@@ -6,7 +6,7 @@
 # raw string interpolation with no escaping, and `forms_shorcode.html.erb` emits the result through
 # `raw`. Two trust levels reach those sinks, and the admin panel is same-origin with the frontend, so
 # script landing here runs with an administrator's session.
-RSpec.describe 'Security: contact form output escaping', type: :request do
+RSpec.describe 'Security: contact form output escaping' do
   let!(:site) { CamaleonCms::Site.first.decorate }
 
   # `required` is stored as the string "true" by the form editor (hidden_field_tag + check_box_tag),

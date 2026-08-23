@@ -1,9 +1,16 @@
+# frozen_string_literal: true
+
+# Contact-form logic shared by the admin and front controllers: it gates authored markup at save
+# time, and validates, stores and mails a visitor's submission.
 module Plugins::CamaContactForm::ContactFormControllerConcern
   # The field types whose submitted value the renderer interpolates back into the page, and the
   # position each one lands in. Everything else -- radio, checkboxes, dropdown, file -- is only ever
   # compared against, never interpolated, so nothing it contains can escape anything.
   ECHOED_ATTRIBUTE_FIELD_TYPES = %w[text website email].freeze
   ECHOED_TEXTAREA_FIELD_TYPES = %w[paragraph textarea].freeze
+
+  # Field types whose submitted value is a list of chosen option labels, joined for the mail summary.
+  MULTI_VALUE_FIELD_TYPES = %w[radio checkboxes].freeze
 
   # Elements that do something rather than say something, wherever they appear.
   ACTIVE_ELEMENTS = %w[script style iframe object embed applet frame frameset form input button
@@ -37,8 +44,8 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       end
       fields[f[:cid].to_sym] = file_paths
     end
-    new_settings = { 'fields' => fields, 'created_at' => Time.current.strftime('%Y-%m-%d %H:%M:%S').to_s }.to_json
-    form_new = current_site.contact_forms.new(name: "response-#{Time.now}", description: form.description,
+    new_settings = { 'fields' => fields, 'created_at' => Time.now.utc.strftime('%Y-%m-%d %H:%M:%S').to_s }.to_json
+    form_new = current_site.contact_forms.new(name: "response-#{Time.now.utc}", description: form.description,
                                               settings: new_settings, site_id: form.site_id, parent_id: form.id)
     if form_new.save
       fields_data = convert_form_values(form, fields)
@@ -219,7 +226,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       if ft == 'file'
         nr_files = Array(fields[cid]).size
         values[label] << "#{nr_files} #{'file'.pluralize(nr_files)} (attached)" if fields[cid].present?
-      elsif %w[radio checkboxes].include?(ft)
+      elsif MULTI_VALUE_FIELD_TYPES.include?(ft)
         values[label] << Array(fields[cid]).map { |f| f.to_s.translate }.join(', ') if fields[cid].present?
       elsif fields[cid].present?
         values[label] << fields[cid]
@@ -229,6 +236,6 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   end
 
   def relevant_field?(field)
-    !%w[captcha submit button].include? field[:field_type]
+    %w[captcha submit button].exclude?(field[:field_type])
   end
 end

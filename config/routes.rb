@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Rails.application.routes.draw do
   scope PluginRoutes.system_info['relative_url_root'] do
     scope '(:locale)', locale: /#{PluginRoutes.all_locales}/, defaults: {} do

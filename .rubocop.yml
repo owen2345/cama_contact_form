@@ -13,8 +13,7 @@ AllCops:
     - db/**/*
     - spec/dummy/**/* # Generated camaleon_cms-backed dummy app (incl. the copied default theme)
     - /**/vendor/**/* # Exclude downloaded gem code in CI
-  NewCops: disable
-  SuggestExtensions: false
+  NewCops: enable
   TargetRailsVersion: 6.1
   TargetRubyVersion: 3.0 # matches the gemspec's required_ruby_version
 
@@ -58,31 +57,15 @@ Style/FormatStringToken:
 Rails/ApplicationRecord:
   Enabled: false
 
-# A cross-gem `belongs_to :site` (CamaleonCms::Site); the inverse lives in the host, so pinning
-# inverse_of here would guess at the host's association name.
-Rails/InverseOf:
-  Enabled: false
-
-# `Time.now` stamps a response identifier only, which is not timezone-sensitive.
-Rails/TimeZone:
-  Enabled: false
-
-# `ob` is the plugin's legacy name for the form-field object, used throughout the render helpers;
-# renaming ~15 references carries more risk than the short name. Merged with RuboCop's default list.
-Naming/MethodParameterName:
-  AllowedNames:
-    - ob
-  inherit_mode:
-    merge:
-      - AllowedNames
 # ------------------------------------------------------------------------------------------------
 
-Layout/MultilineMethodCallIndentation:
-  Enabled: true
-  EnforcedStyle: aligned
-
-Lint/MissingSuper:
+# The gem is published by a CI workflow using a scoped API key, not an interactive session, so the
+# rubygems_mfa_required metadata flag is intentionally not set.
+Gemspec/RequireMFA:
   Enabled: false
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: aligned
 
 Rails/Delegate:
   Enabled: false
@@ -100,7 +83,6 @@ RSpec/InstanceVariable:
   Enabled: false
 
 RSpec/MessageSpies:
-  Enabled: true
   EnforcedStyle: receive
 
 RSpec/MultipleMemoizedHelpers:
@@ -110,29 +92,15 @@ RSpec/MultipleExpectations:
   Enabled: false
 
 RSpec/NestedGroups:
-  Enabled: true
   Max: 5
-
-RSpec/SpecFilePathFormat:
-  Enabled: false
-
-RSpec/SpecFilePathSuffix:
-  Enabled: true
 
 Security/MarshalLoad:
   Exclude:
     - spec/**/*
-
-Style/Documentation:
-  Enabled: false
-
-Style/FrozenStringLiteralComment:
-  Enabled: false
 
 Style/MixinUsage:
   Exclude:
     - spec/**/*
 
 Style/NumericPredicate:
-  Enabled: true
   EnforcedStyle: comparison

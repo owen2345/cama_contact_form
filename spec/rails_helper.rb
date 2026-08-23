@@ -34,7 +34,7 @@ FactoryBot.definition_file_paths = [File.expand_path('factories', __dir__)]
 FactoryBot.reload
 
 # Support helpers (CurrentSpecHelper, etc.).
-Dir[File.expand_path('support/**/*.rb', __dir__)].sort.each { |f| require f }
+Dir[File.expand_path('support/**/*.rb', __dir__)].each { |f| require f }
 
 RSpec.configure do |config|
   config.include CurrentSpecHelper
@@ -55,6 +55,7 @@ RSpec.configure do |config|
     # transaction, so clear them or a run of frontend submissions in one example bans the shared
     # client IP for the next.
     Rails.cache.delete_matched(/cama_captcha_attack|plugins_attack_ban/) if Rails.cache.respond_to?(:delete_matched)
-    I18n.locale = I18n.default_locale
+    # A between-example reset, not a scoped translation, so I18n.with_locale (a block) does not fit.
+    I18n.locale = I18n.default_locale # rubocop:disable Rails/I18nLocaleAssignment
   end
 end

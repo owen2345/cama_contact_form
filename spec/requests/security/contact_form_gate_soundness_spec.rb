@@ -12,7 +12,7 @@
 #   3. It asks the wrong question. `sanitize(v) != v` tests whether a value is *spelled* the way
 #      Nokogiri spells it, not whether it is dangerous, so it refused ordinary prose while a value
 #      the sanitizer merely reformatted looked identical to one it had gutted.
-RSpec.describe 'Security: contact form gate soundness', type: :request do
+RSpec.describe 'Security: contact form gate soundness' do
   init_site
 
   let(:current_site) { Cama::Site.first.decorate }

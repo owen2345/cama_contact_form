@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 source 'https://rubygems.org'
 
 # Declare your gem's dependencies in cama_contact_form.gemspec.
@@ -18,3 +20,29 @@ gem 'sprockets-rails', '>= 3.5.2'
 # the save-time gate), so tests must never resolve to the vulnerable 2.9.2 (audit CF-8). The lockfile
 # is gitignored for a gem, so this floor is where the requirement is documented and enforced.
 gem 'camaleon_cms', '>= 2.9.3'
+
+# Development/test dependencies (none are shipped in the packaged gem). A camaleon_cms-backed dummy
+# Rails app under spec/ is booted under RSpec.
+group :development do
+  gem 'factory_bot_rails'
+  gem 'faker'
+  gem 'rspec-rails'
+  gem 'sqlite3'
+
+  # Feature specs (:js) drive the admin UI through a real headless Chrome via Capybara + Selenium.
+  # puma is the Capybara rack server; capybara-screenshot saves a screenshot when a :js example fails.
+  gem 'capybara'
+  gem 'capybara-screenshot'
+  gem 'puma'
+  gem 'selenium-webdriver'
+
+  # Linting -- same rubocop plugin set as camaleon_cms, so style stays consistent across the two.
+  gem 'rubocop'
+  gem 'rubocop-capybara'
+  gem 'rubocop-factory_bot'
+  gem 'rubocop-performance'
+  gem 'rubocop-rails'
+  gem 'rubocop-rake'
+  gem 'rubocop-rspec'
+  gem 'rubocop-rspec_rails'
+end
