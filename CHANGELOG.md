@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security: authored-markup gate delegates to camaleon-cms's UnsafeMarkup
+
+The admin form editor's markup gate now calls `CamaleonCms::UnsafeMarkup` instead of a private fork that had drifted behind it. This closes a gap the core detector already covered: entity-encoded markup smuggled through a kept attribute (`title`, `data-*`, `aria-*`), which a client-side `data-html` sink (Bootstrap tooltip/popover) injects as live markup, was accepted, now refused. Needs `camaleon_cms >= 2.9.3`, already the floor. [#75](https://github.com/owen2345/cama_contact_form/pull/75).
+
 ### Tooling: stricter RuboCop cops
 
 Enables RuboCop cops the initial setup had relaxed, fixing the code rather than exempting it: frozen-string comments, class/module docs, `Rails/TimeZone` (UTC timestamps), an `ob`→`obj` rename, and `NewCops`. Development dependencies move to the Gemfile. `Rails/InverseOf` and `Gemspec/RequireMFA` stay exempt, with reasons. Development/CI only; the packaged gem is unchanged. [#74](https://github.com/owen2345/cama_contact_form/pull/74).
