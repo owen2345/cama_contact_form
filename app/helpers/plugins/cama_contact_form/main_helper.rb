@@ -3,6 +3,7 @@
 # View helpers that render a form's fields to Bootstrap markup for the `[forms]` shortcode.
 module Plugins::CamaContactForm::MainHelper
   include Recaptcha::Adapters::ViewMethods
+
   def self.included(klass)
     klass.helper_method %i[cama_form_element_bootstrap_object cama_form_shortcode]
   rescue StandardError
@@ -216,13 +217,16 @@ module Plugins::CamaContactForm::MainHelper
     html
   end
 
+  # Field control types rendered as a group of <input> tags rather than a <select>.
+  RADIO_CHECKBOX_CONTROL_TYPES = %w[radio checkbox].freeze
+
   def cama_form_select_multiple_bootstrap(obj, title, type, values)
     # Defensive, because a form saved before the gate required a well-formed option list carries
     # whatever it carries -- and `nil.each`, or `op[:label]` on a String, is a 500 on every visit to
     # the page. `Array()` alone will not do: on a Hash it yields key/value pairs.
     raw_options = obj[:field_options][:options]
     options = (raw_options.is_a?(Hash) ? raw_options.values : Array(raw_options))
-              .select { |op| op.is_a?(Hash) }
+              .grep(Hash)
     include_other_option = obj[:field_options][:include_other_option]
     other_input = ''
 
@@ -232,11 +236,11 @@ module Plugins::CamaContactForm::MainHelper
 
     custom_class = obj[:custom_class].to_s
 
-    if %w[radio checkbox].include?(type)
+    if RADIO_CHECKBOX_CONTROL_TYPES.include?(type)
       other_input = if include_other_option
                       "<div class=\"#{type} #{custom_class}\"> <label for=\"#{obj[:cid]}\">" \
-                      "<input id=\"#{obj[:cid]}-other\" type=\"#{type}\" name=\"#{title.downcase}[]\" class=\"\">" \
-                      'Other <input type="text" /></label></div>'
+                        "<input id=\"#{obj[:cid]}-other\" type=\"#{type}\" name=\"#{title.downcase}[]\" class=\"\">" \
+                        'Other <input type="text" /></label></div>'
                     else
                       ' '
                     end
@@ -246,7 +250,7 @@ module Plugins::CamaContactForm::MainHelper
 
     options.each do |op|
       label = op[:label].to_s.translate
-      if %w[radio checkbox].include?(type)
+      if RADIO_CHECKBOX_CONTROL_TYPES.include?(type)
         input_tag = "<input #{cf_attrs(obj[:custom_attrs])} type=\"#{type}\" " \
                     "#{'checked' if op[:checked].to_s.cama_true?} name=\"#{f_name}[]\" " \
                     "class=\"\" value=\"#{label.downcase}\">"
@@ -267,7 +271,7 @@ module Plugins::CamaContactForm::MainHelper
       end
     end
 
-    html += if %w[radio checkbox].include?(type)
+    html += if RADIO_CHECKBOX_CONTROL_TYPES.include?(type)
               other_input
             else
               ' </select>'

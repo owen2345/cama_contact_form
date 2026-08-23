@@ -10,7 +10,7 @@
 # Without this gate, any role holding `:manage, :plugins` — the only permission the plugin's admin
 # controller checks, and not necessarily an administrator — could store script that runs in an
 # administrator's session, since the admin panel is same-origin with the public site.
-RSpec.describe 'Security: contact form content rejection', type: :request do
+RSpec.describe 'Security: contact form content rejection' do
   init_site
 
   let(:current_site) { Cama::Site.first.decorate }

@@ -13,7 +13,7 @@ AllCops:
     - db/**/*
     - spec/dummy/**/* # Generated camaleon_cms-backed dummy app (incl. the copied default theme)
     - /**/vendor/**/* # Exclude downloaded gem code in CI
-  NewCops: disable
+  NewCops: enable
   SuggestExtensions: false
   TargetRailsVersion: 6.1
   TargetRubyVersion: 3.0 # matches the gemspec's required_ruby_version
@@ -59,6 +59,11 @@ Rails/ApplicationRecord:
   Enabled: false
 
 # ------------------------------------------------------------------------------------------------
+
+# The gem is published by a CI workflow using a scoped API key, not an interactive session, so the
+# rubygems_mfa_required metadata flag is intentionally not set.
+Gemspec/RequireMFA:
+  Enabled: false
 
 Layout/MultilineMethodCallIndentation:
   Enabled: true

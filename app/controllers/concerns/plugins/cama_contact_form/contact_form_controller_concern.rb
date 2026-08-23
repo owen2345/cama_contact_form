@@ -9,6 +9,9 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   ECHOED_ATTRIBUTE_FIELD_TYPES = %w[text website email].freeze
   ECHOED_TEXTAREA_FIELD_TYPES = %w[paragraph textarea].freeze
 
+  # Field types whose submitted value is a list of chosen option labels, joined for the mail summary.
+  MULTI_VALUE_FIELD_TYPES = %w[radio checkboxes].freeze
+
   # Elements that do something rather than say something, wherever they appear.
   ACTIVE_ELEMENTS = %w[script style iframe object embed applet frame frameset form input button
                        link meta base svg math template].freeze
@@ -223,7 +226,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       if ft == 'file'
         nr_files = Array(fields[cid]).size
         values[label] << "#{nr_files} #{'file'.pluralize(nr_files)} (attached)" if fields[cid].present?
-      elsif %w[radio checkboxes].include?(ft)
+      elsif MULTI_VALUE_FIELD_TYPES.include?(ft)
         values[label] << Array(fields[cid]).map { |f| f.to_s.translate }.join(', ') if fields[cid].present?
       elsif fields[cid].present?
         values[label] << fields[cid]
@@ -233,6 +236,6 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   end
 
   def relevant_field?(field)
-    !%w[captcha submit button].include? field[:field_type]
+    %w[captcha submit button].exclude?(field[:field_type])
   end
 end

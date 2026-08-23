@@ -3,6 +3,7 @@
 # A contact form and, through `parent_id`, its stored response rows, scoped to a site.
 class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   include Plugins::CamaContactForm::MainHelper
+
   self.table_name = 'plugins_contact_forms'
   belongs_to :site, class_name: 'CamaleonCms::Site'
   # attr_accessible :site_id, :name, :description, :count, :slug, :value, :settings, :parent_id
@@ -106,6 +107,6 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
     file_cids
       .flat_map { |cid| response_data[cid] }
       .map { |file| file.sub Rails.application.routes.url_helpers.cama_root_url, Rails.public_path.to_s }
-      .each { |file| File.delete file if File.exist? file }
+      .each { |file| FileUtils.rm_f file }
   end
 end
