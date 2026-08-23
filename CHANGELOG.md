@@ -1,5 +1,16 @@
 # Change Log
 
+## Unreleased
+
+### Security: the `forms` shortcode is gated by camaleon-cms
+
+Pairs with [camaleon-cms#1277](https://github.com/owen2345/camaleon-cms/pull/1277), which adds a
+default-off `content_shortcodes` permission and refuses shortcode-bearing content from untrusted
+authors. This release declares the plugin's `forms` shortcode name to camaleon-cms's boot-time
+`CamaleonCms::ShortcodeRegistry`, so a non-administrator without the permission can no longer save
+`[forms ...]` in content. The declaration is guarded — nothing changes against camaleon-cms versions
+predating the registry — and the shortcode's rendering is unchanged.
+
 ## 0.1.12
 
 Two independent changes ship together. Each section links its PR — the reasoning, the exploits and
