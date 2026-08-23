@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   include Plugins::CamaContactForm::MainHelper
   self.table_name = 'plugins_contact_forms'

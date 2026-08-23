@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module CamaContactForm
   class Engine < ::Rails::Engine
     # Declare this plugin's shortcode name to Camaleon's boot-time shortcode registry so the CMS

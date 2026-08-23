@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFrontController
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern

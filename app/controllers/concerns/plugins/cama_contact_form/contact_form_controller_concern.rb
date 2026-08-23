@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Plugins::CamaContactForm::ContactFormControllerConcern
   # The field types whose submitted value the renderer interpolates back into the page, and the
   # position each one lands in. Everything else -- radio, checkboxes, dropdown, file -- is only ever

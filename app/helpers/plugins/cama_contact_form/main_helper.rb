@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Plugins::CamaContactForm::MainHelper
   include Recaptcha::Adapters::ViewMethods
   def self.included(klass)
