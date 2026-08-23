@@ -7,8 +7,12 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
   belongs_to :site, class_name: 'CamaleonCms::Site'
   # attr_accessible :site_id, :name, :description, :count, :slug, :value, :settings, :parent_id
 
+  # A self-referential parent/child: a form and its stored response rows. There is no reciprocal
+  # `belongs_to :parent` to point `inverse_of` at, so the cop is disabled for this association only.
+  # rubocop:disable Rails/InverseOf
   has_many :responses, class_name: 'Plugins::CamaContactForm::CamaContactForm', foreign_key: :parent_id,
                        dependent: :destroy
+  # rubocop:enable Rails/InverseOf
   validates :name, presence: true
   validates :slug, uniqueness: { scope: :site_id }
 

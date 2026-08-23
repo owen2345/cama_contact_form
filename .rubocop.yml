@@ -58,11 +58,6 @@ Style/FormatStringToken:
 Rails/ApplicationRecord:
   Enabled: false
 
-# A cross-gem `belongs_to :site` (CamaleonCms::Site); the inverse lives in the host, so pinning
-# inverse_of here would guess at the host's association name.
-Rails/InverseOf:
-  Enabled: false
-
 # ------------------------------------------------------------------------------------------------
 
 Layout/MultilineMethodCallIndentation:
