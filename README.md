@@ -1,6 +1,29 @@
 # Camaleon CMS Plugin
 This is a plugin for Camaleon CMS to manage Contact Forms
 
+## Testing
+
+This plugin ships no test suite of its own. Its behaviour is a Camaleon CMS integration — the
+save-time gate depends on the CMS's role/permission model (`contact_form_unfiltered_html`),
+`CurrentRequest`, and the shared `UnsafeMarkup` detector — so it is exercised **host-side in the
+[camaleon_cms](https://github.com/owen2345/camaleon-cms) repository**, which supplies the app,
+database and request context the specs need. Clone that repo and run them with `bin/rspec`.
+
+The specs that cover this plugin:
+
+- [`spec/requests/security/contact_form_content_rejection_spec.rb`](https://github.com/owen2345/camaleon-cms/blob/master/spec/requests/security/contact_form_content_rejection_spec.rb)
+  — untrusted content is refused on save, never rewritten (stored content always equals authored).
+- [`spec/requests/security/contact_form_output_escaping_spec.rb`](https://github.com/owen2345/camaleon-cms/blob/master/spec/requests/security/contact_form_output_escaping_spec.rb)
+  — reproduces the original output XSS (raw interpolation into the form markup) and pins the fix.
+- [`spec/requests/security/contact_form_gate_soundness_spec.rb`](https://github.com/owen2345/camaleon-cms/blob/master/spec/requests/security/contact_form_gate_soundness_spec.rb)
+  — the gate's soundness: the three ways a gate like this stops being sound.
+- [`spec/models/contact_form_unfiltered_html_permission_spec.rb`](https://github.com/owen2345/camaleon-cms/blob/master/spec/models/contact_form_unfiltered_html_permission_spec.rb)
+  — the `contact_form_unfiltered_html` permission (manager-family; distinct from `post_content_unfiltered_html`).
+- [`spec/features/admin/contact_form_spec.rb`](https://github.com/owen2345/camaleon-cms/blob/master/spec/features/admin/contact_form_spec.rb)
+  — the admin create/edit flow.
+
+Browse the full set under [`spec/requests/security/`](https://github.com/owen2345/camaleon-cms/tree/master/spec/requests/security).
+
 ## Releasing
 
 Releases are cut by the **Release** GitHub Actions workflow
@@ -15,7 +38,7 @@ release needs, in this order:
 5. publishes the GitHub release, with notes taken from `CHANGELOG.md` and the `.gem` plus its
    checksums attached.
 
-No tests run here — the suite that covers this plugin lives in the
+No tests run here — the [test suite](#testing) that covers this plugin lives in the
 [camaleon_cms](https://github.com/owen2345/camaleon-cms) repository.
 
 `lib/cama_contact_form/version.rb` is the single source of truth for the version. The tag, the
