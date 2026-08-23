@@ -28,6 +28,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # The :js admin feature spec drives headless Chrome. The runner ships Chrome; this installs a
+      # matching chromedriver on PATH, which Selenium Manager then uses instead of downloading one.
+      - name: Set up Chromedriver
+        uses: nanasess/setup-chromedriver@v3
+
       # ruby-version comes from .tool-versions. bundler-cache caches the installed gems keyed on the
       # committed Gemfile.lock; the sqlite3 gem ships a precompiled linux binary, so no apt packages
       # are needed.

@@ -32,6 +32,17 @@ exact gem versions the suite runs against are known and reproducible — which a
 `bundler-cache` effective; a RuboCop result cache is added too. Development/CI only; the packaged gem
 is unchanged. [#72](https://github.com/owen2345/cama_contact_form/pull/72).
 
+### Testing: the contact-form specs now live with the plugin
+
+Moves the contact-form security specs — request specs for content rejection, output escaping and gate
+soundness, plus the `:js` admin feature spec — out of camaleon-cms and into this repository, now that
+the plugin has its own camaleon_cms-backed harness: the code they exercise lives here. The harness
+gains a headless-Chrome setup (Capybara + Selenium) for the feature spec and a per-suite installed
+site for the request specs. The `contact_form_unfiltered_html` permission-model spec stays in
+camaleon-cms, where that permission is defined. Development/CI only; the packaged gem is unchanged.
+[#73](https://github.com/owen2345/cama_contact_form/pull/73) · pairs with
+[camaleon-cms#PR](https://github.com/owen2345/camaleon-cms/pull/PR), which removes the moved specs.
+
 ## 0.1.12
 
 Two independent changes ship together. Each section links its PR — the reasoning, the exploits and
