@@ -14,24 +14,7 @@ RDoc::Task.new(:rdoc) do |rdoc|
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
-APP_RAKEFILE = File.expand_path("../test/dummy/Rakefile", __FILE__)
-load 'rails/tasks/engine.rake'
-
-
-load 'rails/tasks/statistics.rake'
-
-
-
+# The plugin's behaviour is exercised host-side in the camaleon_cms repository (see README /
+# CHANGELOG); this repo ships no test suite, so the dummy-app engine tasks and the default `test`
+# task are intentionally absent. `Bundler::GemHelper.install_tasks` still provides build/install/release.
 Bundler::GemHelper.install_tasks
-
-require 'rake/testtask'
-
-Rake::TestTask.new(:test) do |t|
-  t.libs << 'lib'
-  t.libs << 'test'
-  t.pattern = 'test/**/*_test.rb'
-  t.verbose = false
-end
-
-
-task default: :test
