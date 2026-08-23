@@ -123,9 +123,6 @@ Security/MarshalLoad:
   Exclude:
     - spec/**/*
 
-Style/Documentation:
-  Enabled: false
-
 Style/MixinUsage:
   Exclude:
     - spec/**/*

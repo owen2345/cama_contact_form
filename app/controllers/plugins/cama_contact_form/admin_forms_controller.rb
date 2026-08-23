@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Admin CRUD for a site's contact forms; refuses (never rewrites) authored markup an untrusted role
+# is not permitted to store.
 class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::PluginsAdminController
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern
@@ -189,6 +191,8 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # attribute the message never mentions.
   OPEN_ATTR_NAME = /\A(?:data|aria)-[a-zA-Z][-a-zA-Z0-9_.]*\z/
 
+  # A PermitScrubber that also keeps `data-`/`aria-` attributes, which the markup allowlist cannot
+  # enumerate.
   class MarkupScrubber < Rails::HTML::PermitScrubber
     private
 

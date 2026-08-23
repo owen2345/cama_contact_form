@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# View helpers that render a form's fields to Bootstrap markup for the `[forms]` shortcode.
 module Plugins::CamaContactForm::MainHelper
   include Recaptcha::Adapters::ViewMethods
   def self.included(klass)

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Contact-form logic shared by the admin and front controllers: it gates authored markup at save
+# time, and validates, stores and mails a visitor's submission.
 module Plugins::CamaContactForm::ContactFormControllerConcern
   # The field types whose submitted value the renderer interpolates back into the page, and the
   # position each one lands in. Everything else -- radio, checkboxes, dropdown, file -- is only ever
