@@ -6,6 +6,24 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern
 
+  # The markup gate delegates to CamaleonCms::UnsafeMarkup, which ships in camaleon_cms >= 2.9.3. That
+  # floor is not expressible as a gemspec dependency -- camaleon_cms depends on this gem, so a reverse
+  # pin would be circular -- and camaleon_cms 2.9.2 pins `cama_contact_form ~> 0.1.0`, wide enough to
+  # resolve this release against a core that lacks the detector. Fail fast and clearly at load, rather
+  # than with a bare NameError deep inside the first untrusted save: without the detector nothing can
+  # be gated, so the plugin must not run at all against an incompatible core.
+  def self.core_markup_detector_available?
+    defined?(CamaleonCms::UnsafeMarkup) ? true : false
+  end
+
+  def self.ensure_core_markup_detector!
+    return if core_markup_detector_available?
+
+    raise "cama_contact_form #{::CamaContactForm::VERSION} requires camaleon_cms >= 2.9.3 " \
+          '(CamaleonCms::UnsafeMarkup is unavailable).'
+  end
+  ensure_core_markup_detector!
+
   before_action :set_form, only: %w[show edit update destroy]
   add_breadcrumb I18n.t('plugins.cama_contact_form.title', default: 'Contact Form'),
                  :admin_plugins_cama_contact_form_admin_forms_path
