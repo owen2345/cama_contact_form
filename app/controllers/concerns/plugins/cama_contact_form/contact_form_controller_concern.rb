@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'uri'
+
 # Contact-form logic shared by the admin and front controllers: it gates authored markup at save
 # time, and validates, stores and mails a visitor's submission.
 module Plugins::CamaContactForm::ContactFormControllerConcern
@@ -61,9 +63,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
                                     default: 'Your message has been sent successfully. Thank you very much!'))
       args = { form: form, values: fields }
       hooks_run('contact_form_after_submit', args)
-      if form.mail_settings[:to_answer].present? && (answer_to = fields[form.mail_settings[:to_answer].to_s.gsub(
-        /(\[|\])/, ''
-      ).to_sym]).present?
+      if (answer_to = auto_reply_recipient(form, fields))
         content = form.mail_settings[:body_answer].to_s.translate.cama_replace_codes(fields)
         cama_send_email(answer_to, form.mail_settings[:subject_answer].to_s.translate.cama_replace_codes(fields),
                         { content: content })
@@ -72,6 +72,40 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       errors << form.the_message('mail_sent_ng',
                                  t('.error_form_val', default: 'An error occurred, please try again.'))
     end
+  end
+
+  # CF-1: the auto-reply ("confirmation e-mail") recipient is whatever the visitor typed into the field
+  # named by `to_answer`, so it is fully attacker-controlled -- unchecked, the feature sends mail from
+  # the site's own From address to anyone. The reply goes to the normalized address, or nowhere.
+  # Volume across submissions is a separate concern (CF-2, rate limiting).
+  #
+  # A refused present value is logged -- otherwise the response is indistinguishable from full
+  # success and a lost confirmation is undiagnosable. The line names the form, not the value: the
+  # value is hostile by hypothesis, and hostile bytes don't belong in the log stream. An absent or
+  # blank value stays silent, as it always has -- the visitor supplied nothing to refuse.
+  def auto_reply_recipient(form, fields)
+    return if form.mail_settings[:to_answer].blank?
+
+    value = fields[form.mail_settings[:to_answer].to_s.gsub(/(\[|\])/, '').to_sym]
+    address = normalized_email_address(value)
+    if address.nil? && value.present?
+      Rails.logger.warn("cama_contact_form: auto-reply for form #{form.id} skipped, recipient failed validation (CF-1)")
+    end
+    address
+  end
+
+  # The stripped value when it is a single, syntactically-valid address; nil otherwise. Surrounding
+  # whitespace is stripped -- a pasted or mobile-typed address often carries a stray space, and the
+  # mailer delivered those before this guard existed -- and what remains must match
+  # `URI::MailTo::EMAIL_REGEXP`, which is anchored and admits no CR/LF, inner whitespace or `,`/`;`,
+  # so one submission can neither header-inject a Bcc nor fan out to a recipient list. Refused with
+  # the attacks, deliberately: name-addr forms (`Jane <jane@example.com>` -- address lists share that
+  # grammar) and raw-unicode addresses (the regexp is ASCII-only; the punycode form passes). A
+  # non-String value (`fields[cid][]=…` arrives as an Array) is rejected through `to_s` rather than
+  # raising.
+  def normalized_email_address(value)
+    address = value.to_s.strip
+    address if address.match?(URI::MailTo::EMAIL_REGEXP)
   end
 
   # A visitor's submission is rejected, not escaped, for the same reason an untrusted author's is:
@@ -186,9 +220,12 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
                                                                    default: 'This value is required'))}"
           validate = false
         end
-        # `to_s` because the submitter chooses whether to send the key at all, and what shape to
-        # send it in: `nil.match` and `Hash#match` are both NoMethodError, on a public endpoint.
-        if (f[:field_type].to_s == 'email') && !fields[cid].to_s.match(/@/)
+        # Judged by the same rule as the auto-reply recipient (`normalized_email_address`, which is
+        # total on any submitted shape -- the submitter chooses whether to send the key at all, and
+        # in what shape), so the field validation and the send decision cannot disagree: a malformed
+        # address is an error the visitor can act on here, not a success message followed by a
+        # confirmation that silently never arrives.
+        if (f[:field_type].to_s == 'email') && normalized_email_address(fields[cid]).nil?
           errors << "#{label.to_s.translate}: #{form.the_message('invalid_email',
                                                                  t('.email_invalid_val',
                                                                    default: 'The e-mail address appears invalid'))}"
