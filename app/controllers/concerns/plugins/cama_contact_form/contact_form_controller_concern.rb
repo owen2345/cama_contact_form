@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'uri'
+
 # Contact-form logic shared by the admin and front controllers: it gates authored markup at save
 # time, and validates, stores and mails a visitor's submission.
 module Plugins::CamaContactForm::ContactFormControllerConcern
@@ -63,7 +65,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       hooks_run('contact_form_after_submit', args)
       if form.mail_settings[:to_answer].present? && (answer_to = fields[form.mail_settings[:to_answer].to_s.gsub(
         /(\[|\])/, ''
-      ).to_sym]).present?
+      ).to_sym]).present? && valid_reply_recipient?(answer_to)
         content = form.mail_settings[:body_answer].to_s.translate.cama_replace_codes(fields)
         cama_send_email(answer_to, form.mail_settings[:subject_answer].to_s.translate.cama_replace_codes(fields),
                         { content: content })
@@ -72,6 +74,17 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       errors << form.the_message('mail_sent_ng',
                                  t('.error_form_val', default: 'An error occurred, please try again.'))
     end
+  end
+
+  # CF-1: the auto-reply ("confirmation e-mail") recipient is whatever the visitor typed into the field
+  # named by `to_answer`, so it is fully attacker-controlled -- unchecked, the feature sends mail from
+  # the site's own From address to anyone. Send only to a single, syntactically-valid address:
+  # `URI::MailTo::EMAIL_REGEXP` is anchored and admits no CR/LF, whitespace or `,`/`;`, so one
+  # submission can neither header-inject a Bcc nor fan out to a recipient list; a non-String value
+  # (`fields[cid][]=…` arrives as an Array) is rejected through `to_s` rather than raising. Volume
+  # across submissions is a separate concern (CF-2, rate limiting).
+  def valid_reply_recipient?(value)
+    value.to_s.match?(URI::MailTo::EMAIL_REGEXP)
   end
 
   # A visitor's submission is rejected, not escaped, for the same reason an untrusted author's is:
