@@ -23,6 +23,12 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     /<[a-zA-Z][^>]*\b(?:href|src|action|formaction|data|poster|srcdoc|background)\s*=\s*
        ["']?\s*(?:javascript|vbscript|data)\s*:/imx
 
+  # CF-2: how many submissions one client IP may make to one form before the excess is refused, and
+  # the window that count rolls off over. The threshold is the `contact_form_max_submits` site option
+  # so an operator can loosen it for a form behind shared NAT; the window matches core's login throttle.
+  SUBMISSION_THROTTLE_WINDOW = 15.minutes
+  SUBMISSION_THROTTLE_DEFAULT_MAX = 10
+
   def perform_save_form(form, fields, success, errors)
     attachments = []
     return unless validate_to_save_form(form, fields, errors)
@@ -106,6 +112,27 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   def normalized_email_address(value)
     address = value.to_s.strip
     address if address.match?(URI::MailTo::EMAIL_REGEXP)
+  end
+
+  # CF-2: records this submission against a per-IP, per-form counter and returns whether it has
+  # overrun the window's budget, so `save_form` can refuse the excess before any mail, upload or row
+  # is written -- the endpoint is public and, unless the form carries a captcha field, otherwise
+  # unthrottled.
+  #
+  # The counter is an ATOMIC Rails.cache increment (the pattern core's login throttle uses): `raw:
+  # true` keeps the value a bare integer so Redis/Memcached INCR is atomic (a harmless no-op on
+  # Memory/File stores), and the TTL is refreshed on every hit so a sustained flood keeps the window
+  # alive. Older Memory/File stores (Rails < 7.1) return nil for a missing key instead of seeding it
+  # -- seed it then. It fails open on a null cache store: the throttle is only as strong as the host's
+  # configured cache, which is the operator's call.
+  def submission_throttled?(form)
+    key = "cama_contact_form_submit:#{current_site.id}:#{request.remote_ip}:#{form.id}"
+    count = Rails.cache.increment(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, raw: true)
+    if count.nil?
+      Rails.cache.write(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, raw: true)
+      count = 1
+    end
+    count > current_site.get_option('contact_form_max_submits', SUBMISSION_THROTTLE_DEFAULT_MAX).to_i
   end
 
   # A visitor's submission is rejected, not escaped, for the same reason an untrusted author's is:
