@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security: contact-form submissions are rate-limited per IP (CF-2)
+
+`save_form` is public and, unless the form carries a captcha field, was unthrottled, so a script could mail-bomb the owner, fill the uploads directory, and flood the responses table. Submissions are now capped per client IP per form in a rolling 15-minute window — the `contact_form_max_submits` site option, default 10 — with an atomic cache counter, and the excess is refused before any mail, upload or row is written. [#77](https://github.com/owen2345/cama_contact_form/pull/77).
+
 ## 0.1.13
 
 ### Security: the contact-form auto-reply validates its recipient (CF-1)
