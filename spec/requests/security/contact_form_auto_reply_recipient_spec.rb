@@ -62,9 +62,11 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
   # queue adapter -- the dummy app loads no ActiveJob, so `deliver_later` reaches no `deliveries` array.
   let(:sent_to) { [] }
 
+  # No page is published or rendered here: save_form looks the form up purely by params[:id]
+  # (front_controller.rb) and every example only POSTs, so the shortcode-on-a-post setup the
+  # page-rendering siblings need has no place in this file.
   before do
     form
-    site.the_post('sample-post').update!(content: "[forms slug='contact']")
     allow(CamaleonCms::HtmlMailer).to receive(:sender) do |recipient, *_|
       sent_to << recipient
       instance_double(ActionMailer::MessageDelivery, deliver_later: nil)
