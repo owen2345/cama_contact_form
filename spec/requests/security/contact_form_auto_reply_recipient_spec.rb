@@ -58,8 +58,11 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
   end
 
   # Every recipient handed to the mailer, in call order. Spying on the seam `cama_send_email` calls
-  # (`CamaleonCms::HtmlMailer.sender(recipient, subject, args)`) keeps the assertion independent of the
-  # queue adapter -- the dummy app loads no ActiveJob, so `deliver_later` reaches no `deliveries` array.
+  # (`CamaleonCms::HtmlMailer.sender(recipient, subject, args)`) captures the recipient at the exact
+  # argument position production uses, independent of delivery mechanics: ActiveJob is loaded (the
+  # action_mailer railtie requires its railtie despite the dummy app not asking for it) and the test
+  # queue adapter enqueues `deliver_later` without ever performing, so `ActionMailer::Base.deliveries`
+  # would stay empty here whatever was sent -- it can prove absence, but not who a mail went to.
   let(:sent_to) { [] }
 
   # No page is published or rendered here: save_form looks the form up purely by params[:id]
