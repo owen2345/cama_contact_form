@@ -7,42 +7,15 @@
 # `raw`. Two trust levels reach those sinks, and the admin panel is same-origin with the frontend, so
 # script landing here runs with an administrator's session.
 RSpec.describe 'Security: contact form output escaping' do
-  let!(:site) { CamaleonCms::Site.first.decorate }
-
-  # `required` is stored as the string "true" by the form editor (hidden_field_tag + check_box_tag),
-  # not as a JSON boolean — the plugin calls `.to_bool`, which Camaleon defines only on String.
-  def build_form(fields:, settings: {})
-    site.contact_forms.create!(
-      name: 'Contact', slug: 'contact',
-      value: { fields: fields }.to_json,
-      settings: {
-        'railscf_mail' => { 'to' => 'owner@example.com', 'subject' => 'subject', 'body' => 'body' },
-        'railscf_message' => {},
-        'railscf_form_button' => { 'name_button' => 'Send' }
-      }.merge(settings).to_json
-    )
-  end
-
-  def text_field(cid: 'c1', **overrides)
-    { label: 'Name', field_type: 'text', cid: cid, required: 'true', field_options: {} }.merge(overrides)
-  end
-
-  def publish_form_on_sample_post
-    site.the_post('sample-post').update!(content: "[forms slug='contact']")
-  end
+  # `build_form`, `text_field` and `publish_form_on_sample_post` come from
+  # spec/support/contact_form_builders.rb, shared with the other contact-form request specs.
 
   # Submit with a required field left blank so validation fails; that is the branch which stashes the
   # raw submission into flash[:values] for redisplay.
   def submit_failing(form, fields)
-    post '/plugins/cama_contact_form/save_form', params: { id: form.id, fields: fields }
+    submit_contact_form(form, fields)
     follow_redirect!
     Nokogiri::HTML5.parse(response.body)
-  end
-
-  # Fill every required field so the submission actually completes: that is the branch that stores a
-  # response row and sends the notification e-mail.
-  def submit_succeeding(form, fields)
-    post '/plugins/cama_contact_form/save_form', params: { id: form.id, fields: fields }
   end
 
   def stored_answer(form, cid)
@@ -63,7 +36,7 @@ RSpec.describe 'Security: contact form output escaping' do
       publish_form_on_sample_post
 
       expect do
-        submit_succeeding(form, { c1: '<img src=x onerror=alert(document.domain)>' })
+        submit_contact_form(form, { c1: '<img src=x onerror=alert(document.domain)>' })
       end.not_to(change { ActionMailer::Base.deliveries.count })
 
       expect(form.responses.count).to eq(0)
@@ -76,7 +49,7 @@ RSpec.describe 'Security: contact form output escaping' do
                         })
       publish_form_on_sample_post
 
-      submit_succeeding(form, { c1: '<script>alert(1)</script>' })
+      submit_contact_form(form, { c1: '<script>alert(1)</script>' })
 
       expect(form.responses.count).to eq(0)
     end
@@ -92,7 +65,7 @@ RSpec.describe 'Security: contact form output escaping' do
       publish_form_on_sample_post
 
       expect do
-        submit_succeeding(form, { c1: 'Fish & Chips <today> please' })
+        submit_contact_form(form, { c1: 'Fish & Chips <today> please' })
       end.to change { form.responses.count }.by(1)
 
       # Stored exactly as written, which is what `[c1]` then splices into the mail body.

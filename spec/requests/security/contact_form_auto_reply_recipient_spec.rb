@@ -8,53 +8,31 @@
 # (a Bcc to thousands) nor fan out to a recipient list. The owner notification -- an author-configured
 # recipient -- is unaffected, and per-submission volume is out of scope here (CF-2, rate limiting).
 RSpec.describe 'Security: contact form auto-reply recipient' do
-  let!(:site) { CamaleonCms::Site.first.decorate }
-
   # A form whose auto-reply is configured: `to_answer` points at field c1, so the visitor's own c1
-  # value becomes the confirmation recipient.
+  # value becomes the confirmation recipient. `build_form` comes from
+  # spec/support/contact_form_builders.rb; only the auto-reply mail settings are stated here.
   let(:form) do
-    site.contact_forms.create!(
-      name: 'Contact', slug: 'contact',
-      value: { fields: [{ label: 'Email', field_type: 'email', cid: 'c1', required: 'true',
-                          field_options: {} }] }.to_json,
-      settings: {
-        'railscf_mail' => { 'to' => 'owner@example.com', 'subject' => 'New', 'body' => 'b',
-                            'to_answer' => '[c1]', 'subject_answer' => 'Thanks', 'body_answer' => 'Got it' },
-        'railscf_message' => {}, 'railscf_form_button' => { 'name_button' => 'Send' }
-      }.to_json
-    )
+    build_form(fields: [text_field(label: 'Email', field_type: 'email')],
+               settings: { 'railscf_mail' => auto_reply_mail_settings })
   end
 
   # A second form whose reply field is a plain text field: no browser-side email cleanup applies and
   # the server's email-field validation does not run, so submissions here exercise the send-time
   # guard alone.
   let(:text_form) do
-    site.contact_forms.create!(
-      name: 'Contact text', slug: 'contact-text',
-      value: { fields: [{ label: 'Reply to', field_type: 'text', cid: 'c1', required: 'true',
-                          field_options: {} }] }.to_json,
-      settings: {
-        'railscf_mail' => { 'to' => 'owner@example.com', 'subject' => 'New', 'body' => 'b',
-                            'to_answer' => '[c1]', 'subject_answer' => 'Thanks', 'body_answer' => 'Got it' },
-        'railscf_message' => {}, 'railscf_form_button' => { 'name_button' => 'Send' }
-      }.to_json
-    )
+    build_form(name: 'Contact text', slug: 'contact-text',
+               fields: [text_field(label: 'Reply to')],
+               settings: { 'railscf_mail' => auto_reply_mail_settings })
   end
 
   # A third form whose reply field is a checkboxes field: its value arrives as an Array, and unlike
   # on echoed field types -- where the markup gate refuses any Array first because `Array#to_s`
   # always carries quotes -- it sails through to the send-time guard.
   let(:checkboxes_form) do
-    site.contact_forms.create!(
-      name: 'Contact boxes', slug: 'contact-boxes',
-      value: { fields: [{ label: 'Pick', field_type: 'checkboxes', cid: 'c1', required: 'false',
-                          field_options: { options: [{ label: 'a@b.com', checked: false }] } }] }.to_json,
-      settings: {
-        'railscf_mail' => { 'to' => 'owner@example.com', 'subject' => 'New', 'body' => 'b',
-                            'to_answer' => '[c1]', 'subject_answer' => 'Thanks', 'body_answer' => 'Got it' },
-        'railscf_message' => {}, 'railscf_form_button' => { 'name_button' => 'Send' }
-      }.to_json
-    )
+    build_form(name: 'Contact boxes', slug: 'contact-boxes',
+               fields: [{ label: 'Pick', field_type: 'checkboxes', cid: 'c1', required: 'false',
+                          field_options: { options: [{ label: 'a@b.com', checked: false }] } }],
+               settings: { 'railscf_mail' => auto_reply_mail_settings })
   end
 
   # Every recipient handed to the mailer, in call order. Spying on the seam `cama_send_email` calls
@@ -76,8 +54,15 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
     end
   end
 
+  # The complete railscf_mail an auto-reply-enabled form needs -- `build_form`'s settings merge is
+  # shallow, so the whole hash is supplied.
+  def auto_reply_mail_settings
+    { 'to' => 'owner@example.com', 'subject' => 'New', 'body' => 'b',
+      'to_answer' => '[c1]', 'subject_answer' => 'Thanks', 'body_answer' => 'Got it' }
+  end
+
   def submit(c1_value, to: form)
-    post '/plugins/cama_contact_form/save_form', params: { id: to.id, fields: { c1: c1_value } }
+    submit_contact_form(to, { c1: c1_value })
   end
 
   # The owner notification fires first (author-configured recipient), the auto-reply second. So a
