@@ -63,9 +63,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
                                     default: 'Your message has been sent successfully. Thank you very much!'))
       args = { form: form, values: fields }
       hooks_run('contact_form_after_submit', args)
-      if form.mail_settings[:to_answer].present? && (answer_to = fields[form.mail_settings[:to_answer].to_s.gsub(
-        /(\[|\])/, ''
-      ).to_sym]).present? && valid_reply_recipient?(answer_to)
+      if (answer_to = auto_reply_recipient(form, fields))
         content = form.mail_settings[:body_answer].to_s.translate.cama_replace_codes(fields)
         cama_send_email(answer_to, form.mail_settings[:subject_answer].to_s.translate.cama_replace_codes(fields),
                         { content: content })
@@ -78,13 +76,26 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
 
   # CF-1: the auto-reply ("confirmation e-mail") recipient is whatever the visitor typed into the field
   # named by `to_answer`, so it is fully attacker-controlled -- unchecked, the feature sends mail from
-  # the site's own From address to anyone. Send only to a single, syntactically-valid address:
-  # `URI::MailTo::EMAIL_REGEXP` is anchored and admits no CR/LF, whitespace or `,`/`;`, so one
-  # submission can neither header-inject a Bcc nor fan out to a recipient list; a non-String value
-  # (`fields[cid][]=…` arrives as an Array) is rejected through `to_s` rather than raising. Volume
-  # across submissions is a separate concern (CF-2, rate limiting).
-  def valid_reply_recipient?(value)
-    value.to_s.match?(URI::MailTo::EMAIL_REGEXP)
+  # the site's own From address to anyone. The reply goes to the normalized address, or nowhere.
+  # Volume across submissions is a separate concern (CF-2, rate limiting).
+  def auto_reply_recipient(form, fields)
+    return if form.mail_settings[:to_answer].blank?
+
+    normalized_email_address(fields[form.mail_settings[:to_answer].to_s.gsub(/(\[|\])/, '').to_sym])
+  end
+
+  # The stripped value when it is a single, syntactically-valid address; nil otherwise. Surrounding
+  # whitespace is stripped -- a pasted or mobile-typed address often carries a stray space, and the
+  # mailer delivered those before this guard existed -- and what remains must match
+  # `URI::MailTo::EMAIL_REGEXP`, which is anchored and admits no CR/LF, inner whitespace or `,`/`;`,
+  # so one submission can neither header-inject a Bcc nor fan out to a recipient list. Refused with
+  # the attacks, deliberately: name-addr forms (`Jane <jane@example.com>` -- address lists share that
+  # grammar) and raw-unicode addresses (the regexp is ASCII-only; the punycode form passes). A
+  # non-String value (`fields[cid][]=…` arrives as an Array) is rejected through `to_s` rather than
+  # raising.
+  def normalized_email_address(value)
+    address = value.to_s.strip
+    address if address.match?(URI::MailTo::EMAIL_REGEXP)
   end
 
   # A visitor's submission is rejected, not escaped, for the same reason an untrusted author's is:
