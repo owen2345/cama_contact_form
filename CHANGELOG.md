@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security: the contact-form auto-reply validates its recipient (CF-1)
+
+The optional confirmation e-mail sent to whatever address a visitor typed into the `to_answer` field — an unauthenticated, attacker-controlled recipient — turning the site into an email cannon from its own From address. It is now validated to a single well-formed address (`URI::MailTo::EMAIL_REGEXP`) before sending, so one submission cannot header-inject a Bcc or fan out to a list. The owner notification is unaffected. [#76](https://github.com/owen2345/cama_contact_form/pull/76).
+
 ### Security: authored-markup gate delegates to camaleon-cms's UnsafeMarkup
 
 The admin form editor's markup gate now calls `CamaleonCms::UnsafeMarkup` instead of a drifted private fork. This closes a gap the core detector already covered: entity-encoded markup smuggled through a kept attribute (`title`, `data-*`, `aria-*`) and injected as live markup by a `data-html` sink (Bootstrap tooltip/popover) was accepted, now refused. Requires `camaleon_cms >= 2.9.3`, now checked at load with a clear error. [#75](https://github.com/owen2345/cama_contact_form/pull/75).
