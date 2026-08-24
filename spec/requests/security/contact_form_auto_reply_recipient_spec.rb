@@ -41,6 +41,22 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
     )
   end
 
+  # A third form whose reply field is a checkboxes field: its value arrives as an Array, and unlike
+  # on echoed field types -- where the markup gate refuses any Array first because `Array#to_s`
+  # always carries quotes -- it sails through to the send-time guard.
+  let(:checkboxes_form) do
+    site.contact_forms.create!(
+      name: 'Contact boxes', slug: 'contact-boxes',
+      value: { fields: [{ label: 'Pick', field_type: 'checkboxes', cid: 'c1', required: 'false',
+                          field_options: { options: [{ label: 'a@b.com', checked: false }] } }] }.to_json,
+      settings: {
+        'railscf_mail' => { 'to' => 'owner@example.com', 'subject' => 'New', 'body' => 'b',
+                            'to_answer' => '[c1]', 'subject_answer' => 'Thanks', 'body_answer' => 'Got it' },
+        'railscf_message' => {}, 'railscf_form_button' => { 'name_button' => 'Send' }
+      }.to_json
+    )
+  end
+
   # Every recipient handed to the mailer, in call order. Spying on the seam `cama_send_email` calls
   # (`CamaleonCms::HtmlMailer.sender(recipient, subject, args)`) keeps the assertion independent of the
   # queue adapter -- the dummy app loads no ActiveJob, so `deliver_later` reaches no `deliveries` array.
@@ -164,6 +180,36 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
       submit('user@xn--mnchen-3ya.de', to: text_form)
 
       expect(sent_to).to eq(['owner@example.com', 'user@xn--mnchen-3ya.de'])
+    end
+  end
+
+  # The normalizer promises a non-String value is "rejected through to_s rather than raising".
+  # Pinned end-to-end in the one configuration where an Array genuinely reaches the guard, so a
+  # cleanup that drops the "redundant" to_s turns this example into a NoMethodError -> 500 on an
+  # unauthenticated endpoint instead of staying green.
+  describe 'a checkboxes field named by to_answer' do
+    it 'refuses the array-shaped recipient without raising' do
+      submit(['a@b.com'], to: checkboxes_form)
+
+      expect(response).to have_http_status(:redirect)
+      expect(sent_to).to eq(['owner@example.com'])
+    end
+  end
+
+  # The totality contract, pinned directly: any shape a submitter can force into params comes back
+  # nil, never an exception.
+  describe 'the recipient normalizer itself' do
+    let(:validator) { Class.new { include Plugins::CamaContactForm::ContactFormControllerConcern }.new }
+
+    it 'refuses non-String shapes through to_s instead of raising' do
+      expect(validator.normalized_email_address(['a@b.com'])).to be_nil
+      expect(validator.normalized_email_address({ 'a' => 'a@b.com' })).to be_nil
+      expect(validator.normalized_email_address(ActionController::Parameters.new(a: 'a@b.com'))).to be_nil
+      expect(validator.normalized_email_address(nil)).to be_nil
+    end
+
+    it 'returns the stripped address for a padded valid one' do
+      expect(validator.normalized_email_address(" a@b.com \n")).to eq('a@b.com')
     end
   end
 end
