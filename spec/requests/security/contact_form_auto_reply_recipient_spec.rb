@@ -82,6 +82,19 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
 
       expect(sent_to).to eq(['owner@example.com'])
     end
+
+    # Without the log line the response is indistinguishable from full success, and "customers say
+    # the confirmation never arrives" is undiagnosable. The value itself must stay out of the log:
+    # it is hostile by hypothesis.
+    it 'logs the refusal, naming the form but never the refused value' do
+      logged = []
+      allow(Rails.logger).to receive(:warn) { |msg| logged << msg.to_s }
+
+      submit('victim@example.com attacker@evil.com', to: text_form)
+
+      expect(logged.join).to include("form #{text_form.id}", 'CF-1')
+      expect(logged.join).not_to include('attacker@evil.com')
+    end
   end
 
   # The email-type field is validated with the same rule the send-time guard applies
@@ -118,6 +131,15 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
       submit(' real.person@submitter.example ')
 
       expect(sent_to).to eq(['owner@example.com', 'real.person@submitter.example'])
+    end
+
+    it 'logs no refusal when the reply is sent' do
+      logged = []
+      allow(Rails.logger).to receive(:warn) { |msg| logged << msg.to_s }
+
+      submit('real.person@submitter.example')
+
+      expect(logged.join).not_to include('CF-1')
     end
   end
 

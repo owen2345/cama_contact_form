@@ -78,10 +78,20 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   # named by `to_answer`, so it is fully attacker-controlled -- unchecked, the feature sends mail from
   # the site's own From address to anyone. The reply goes to the normalized address, or nowhere.
   # Volume across submissions is a separate concern (CF-2, rate limiting).
+  #
+  # A refused present value is logged -- otherwise the response is indistinguishable from full
+  # success and a lost confirmation is undiagnosable. The line names the form, not the value: the
+  # value is hostile by hypothesis, and hostile bytes don't belong in the log stream. An absent or
+  # blank value stays silent, as it always has -- the visitor supplied nothing to refuse.
   def auto_reply_recipient(form, fields)
     return if form.mail_settings[:to_answer].blank?
 
-    normalized_email_address(fields[form.mail_settings[:to_answer].to_s.gsub(/(\[|\])/, '').to_sym])
+    value = fields[form.mail_settings[:to_answer].to_s.gsub(/(\[|\])/, '').to_sym]
+    address = normalized_email_address(value)
+    if address.nil? && value.present?
+      Rails.logger.warn("cama_contact_form: auto-reply for form #{form.id} skipped, recipient failed validation (CF-1)")
+    end
+    address
   end
 
   # The stripped value when it is a single, syntactically-valid address; nil otherwise. Surrounding
