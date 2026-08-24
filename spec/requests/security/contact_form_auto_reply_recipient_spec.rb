@@ -60,24 +60,46 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
   end
 
   # The owner notification fires first (author-configured recipient), the auto-reply second. So a
-  # submission whose auto-reply is refused leaves exactly the owner address behind.
+  # submission whose auto-reply is refused leaves exactly the owner address behind. These target the
+  # text-field form: on the email-field form the same shapes are stopped earlier, by field
+  # validation (next group), and the send-time guard must hold on its own for every other field
+  # type `to_answer` can name.
   describe 'a reply-address field carrying an injected recipient' do
     it 'does not send the auto-reply to a CRLF header-injected address' do
-      submit("victim@example.com\r\nBcc: everyone@example.com")
+      submit("victim@example.com\r\nBcc: everyone@example.com", to: text_form)
 
       expect(sent_to).to eq(['owner@example.com'])
     end
 
     it 'does not send the auto-reply to a comma-separated recipient list' do
-      submit('a@evil.com, b@evil.com, c@evil.com')
+      submit('a@evil.com, b@evil.com, c@evil.com', to: text_form)
 
       expect(sent_to).to eq(['owner@example.com'])
     end
 
     it 'does not send the auto-reply to a space-separated pair either' do
-      submit('victim@example.com attacker@evil.com')
+      submit('victim@example.com attacker@evil.com', to: text_form)
 
       expect(sent_to).to eq(['owner@example.com'])
+    end
+  end
+
+  # The email-type field is validated with the same rule the send-time guard applies
+  # (`normalized_email_address`), so a value the guard would refuse becomes an actionable error at
+  # submission time -- not a success message followed by a confirmation that never arrives. The
+  # validation failure precedes both mails, so nothing is sent at all.
+  describe 'an email field carrying a value the reply guard would refuse' do
+    it 'rejects the submission with a visible error instead of silently withholding the reply' do
+      submit('John Doe <john@example.com>')
+
+      expect(sent_to).to eq([])
+      expect(flash[:contact_form][:error]).to include('appears invalid')
+    end
+
+    it 'rejects an injected recipient list at validation time' do
+      submit('a@evil.com, b@evil.com')
+
+      expect(sent_to).to eq([])
     end
   end
 

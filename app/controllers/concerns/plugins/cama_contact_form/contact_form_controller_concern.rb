@@ -210,9 +210,12 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
                                                                    default: 'This value is required'))}"
           validate = false
         end
-        # `to_s` because the submitter chooses whether to send the key at all, and what shape to
-        # send it in: `nil.match` and `Hash#match` are both NoMethodError, on a public endpoint.
-        if (f[:field_type].to_s == 'email') && !fields[cid].to_s.match(/@/)
+        # Judged by the same rule as the auto-reply recipient (`normalized_email_address`, which is
+        # total on any submitted shape -- the submitter chooses whether to send the key at all, and
+        # in what shape), so the field validation and the send decision cannot disagree: a malformed
+        # address is an error the visitor can act on here, not a success message followed by a
+        # confirmation that silently never arrives.
+        if (f[:field_type].to_s == 'email') && normalized_email_address(fields[cid]).nil?
           errors << "#{label.to_s.translate}: #{form.the_message('invalid_email',
                                                                  t('.email_invalid_val',
                                                                    default: 'The e-mail address appears invalid'))}"
