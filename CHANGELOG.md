@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.13
+
 ### Security: the contact-form auto-reply validates its recipient (CF-1)
 
 The optional confirmation e-mail went to whatever address the visitor typed into the field named by the `to_answer` setting — an unauthenticated, fully attacker-controlled recipient — which turned the site into an email cannon firing from its own From address. The recipient is now stripped of surrounding whitespace and must be a single well-formed address (`URI::MailTo::EMAIL_REGEXP`), so one submission can neither header-inject a Bcc nor fan out to a recipient list; a refused auto-reply is logged. Email-type fields are validated with the same rule at submission time, so a malformed address is a visible error rather than a confirmation that silently never arrives. The owner notification is unaffected. [#76](https://github.com/owen2345/cama_contact_form/pull/76).
