@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    cama_contact_form (0.1.12)
+    cama_contact_form (0.1.13)
       rails
       recaptcha (>= 5.0)
 
