@@ -23,9 +23,10 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     /<[a-zA-Z][^>]*\b(?:href|src|action|formaction|data|poster|srcdoc|background)\s*=\s*
        ["']?\s*(?:javascript|vbscript|data)\s*:/imx
 
-  # How many submissions one client IP may make to one form before the excess is refused, and
-  # the window that count rolls off over. The threshold is the `contact_form_max_submits` site option
-  # so an operator can loosen it for a form behind shared NAT; the window matches camaleon_cms's login throttle.
+  # How many submissions one client IP may make to one form before the excess is refused, and the
+  # window that count rolls off over. The threshold is the site-wide `contact_form_max_submits` option
+  # (it tunes every form on the site at once, not one form); the window matches camaleon_cms's login
+  # throttle.
   SUBMISSION_THROTTLE_WINDOW = 15.minutes
   SUBMISSION_THROTTLE_DEFAULT_MAX = 10
 
@@ -136,7 +137,19 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       Rails.cache.write(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, raw: true)
       count = 1
     end
-    count > current_site.get_option('contact_form_max_submits', SUBMISSION_THROTTLE_DEFAULT_MAX).to_i
+    count > submission_limit
+  end
+
+  # The per-window budget from `contact_form_max_submits`, as a positive integer. get_option hands
+  # back whatever was stored, and camaleon_cms's set_option runs values through String#to_var -- so a
+  # "true"/"false" option is a boolean (and `false.to_i` raises), a cleared one is nil, and a stray
+  # "unlimited"/0 would coerce to 0 and refuse every submission site-wide. Anything that is not a
+  # positive integer falls back to the default rather than 500-ing or silently bricking the form; to
+  # loosen the throttle an operator sets a higher positive integer.
+  def submission_limit
+    configured = current_site.get_option('contact_form_max_submits', SUBMISSION_THROTTLE_DEFAULT_MAX)
+    parsed = Integer(configured, exception: false)
+    parsed&.positive? ? parsed : SUBMISSION_THROTTLE_DEFAULT_MAX
   end
 
   # A visitor's submission is rejected, not escaped, for the same reason an untrusted author's is:
