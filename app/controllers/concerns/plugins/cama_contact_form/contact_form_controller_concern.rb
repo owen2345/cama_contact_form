@@ -355,9 +355,11 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
 
   # Whether any file field carries a value no real form submission produces. The renderer encodes a
   # file field as `fields[cid][]` file parts, and Rack drops an empty-filename part, so the only
-  # legitimate shapes are an absent value and an array of uploaded files; a bare string, a nested
-  # hash, a non-file entry -- each previously raised in the upload loop (`String#to_a`,
-  # `original_filename`), an unauthenticated 500.
+  # legitimate shapes are an absent value -- nil, literally, which is why the skip below tests
+  # exactly that and not `blank?`: a blank-but-present value (`fields[cid]=`, a JSON `false`) is as
+  # forged as any other scalar, and the upload loop's `.to_a` raises on it all the same -- and an
+  # array of uploaded files. A bare string, a nested hash, a non-file entry -- each previously
+  # raised in the upload loop (`String#to_a`, `original_filename`), an unauthenticated 500.
   #
   # Refusing the whole submission, rather than skipping the forged entries, is load-bearing: a
   # String that survived to cama_tmp_upload would be treated there as a URL to download or a local
@@ -367,7 +369,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       next false unless f[:field_type] == 'file'
 
       value = fields[f[:cid].to_sym]
-      next false if value.blank?
+      next false if value.nil?
 
       !value.is_a?(Array) || !value.all?(ActionDispatch::Http::UploadedFile)
     end

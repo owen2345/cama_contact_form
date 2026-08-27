@@ -50,6 +50,24 @@ RSpec.describe 'Security: contact form file field submission shape' do
     expect_refused_as_invalid_request
   end
 
+  # `blank?` is not "absent": Rack drops the empty-filename part outright, so a real form yields
+  # nil, never a present-but-blank value -- and a blank scalar raised in the upload loop like any
+  # other forged shape.
+  it 'refuses a blank scalar where the file array should be, without raising' do
+    expect { submit_contact_form(form, { c1: '', c2: 'x' }) }.not_to raise_error
+
+    expect_refused_as_invalid_request
+  end
+
+  it 'refuses a JSON false where the file array should be, without raising' do
+    expect do
+      post '/plugins/cama_contact_form/save_form',
+           params: { id: form.id, fields: { c1: false, c2: 'x' } }, as: :json
+    end.not_to raise_error
+
+    expect(form.responses.count).to eq(0)
+  end
+
   it 'refuses a nested hash where the file array should be, without raising' do
     expect { submit_contact_form(form, { c1: { nested: 'x' }, c2: 'x' }) }.not_to raise_error
 
