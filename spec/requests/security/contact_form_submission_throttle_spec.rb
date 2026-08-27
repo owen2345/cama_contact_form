@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# CF-2 (SECURITY-AUDIT-2026-08-11): `save_form` is public, unauthenticated, and -- unless the form
-# happens to carry a captcha field -- unthrottled, so a script can mail-bomb the owner (and the CF-1
+# `save_form` is public, unauthenticated, and -- unless the form
+# happens to carry a captcha field -- unthrottled, so a script can mail-bomb the owner (and the
 # auto-reply), fill `public/contact_form/<site_id>` with uploads, and flood the responses table.
 # Submissions are now capped per client IP per form in a rolling window, and the excess is refused
 # before any mail, upload or row is written -- a hard cap rather than a captcha challenge, so a form

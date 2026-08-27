@@ -23,7 +23,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     /<[a-zA-Z][^>]*\b(?:href|src|action|formaction|data|poster|srcdoc|background)\s*=\s*
        ["']?\s*(?:javascript|vbscript|data)\s*:/imx
 
-  # CF-2: how many submissions one client IP may make to one form before the excess is refused, and
+  # How many submissions one client IP may make to one form before the excess is refused, and
   # the window that count rolls off over. The threshold is the `contact_form_max_submits` site option
   # so an operator can loosen it for a form behind shared NAT; the window matches core's login throttle.
   SUBMISSION_THROTTLE_WINDOW = 15.minutes
@@ -84,10 +84,10 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     end
   end
 
-  # CF-1: the auto-reply ("confirmation e-mail") recipient is whatever the visitor typed into the field
+  # The auto-reply ("confirmation e-mail") recipient is whatever the visitor typed into the field
   # named by `to_answer`, so it is fully attacker-controlled -- unchecked, the feature sends mail from
   # the site's own From address to anyone. The reply goes to the normalized address, or nowhere.
-  # Volume across submissions is a separate concern (CF-2, rate limiting).
+  # Volume across submissions is a separate concern (rate limiting, below).
   #
   # A refused present value is logged -- otherwise the response is indistinguishable from full
   # success and a lost confirmation is undiagnosable. The line names the form, not the value: the
@@ -99,7 +99,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     value = fields[form.mail_settings[:to_answer].to_s.gsub(/(\[|\])/, '').to_sym]
     address = normalized_email_address(value)
     if address.nil? && value.present?
-      Rails.logger.warn("cama_contact_form: auto-reply for form #{form.id} skipped, recipient failed validation (CF-1)")
+      Rails.logger.warn("cama_contact_form: auto-reply for form #{form.id} skipped, recipient failed validation")
     end
     address
   end
@@ -118,7 +118,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     address if address.match?(URI::MailTo::EMAIL_REGEXP)
   end
 
-  # CF-2: records this submission against a per-IP, per-form counter and returns whether it has
+  # Records this submission against a per-IP, per-form counter and returns whether it has
   # overrun the window's budget, so `save_form` can refuse the excess before any mail, upload or row
   # is written -- the endpoint is public and, unless the form carries a captcha field, otherwise
   # unthrottled.
