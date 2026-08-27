@@ -83,11 +83,11 @@ RSpec.describe 'Security: contact form submission throttle' do
   # The half of the contract the counter alone cannot prove: a submission that never stores a row --
   # here one that fails required-field validation -- must not spend budget, or a bot's zero-cost
   # failures would lock out a co-NAT visitor whose own submission is valid.
-  describe 'counting only stored submissions', type: :request do
+  describe 'counting only stored submissions' do
     before { site.set_option('contact_form_max_submits', 1) }
 
     it 'does not charge a submission that fails validation' do
-      submit_contact_form(form, { c1: '' })            # required field missing -> no row, no charge
+      submit_contact_form(form, { c1: '' }) # required field missing -> no row, no charge
       submit_contact_form(form, { c1: 'a@example.com' }) # valid -> stored, spends the only unit
       submit_contact_form(form, { c1: 'b@example.com' }) # over limit now -> refused
 
@@ -98,7 +98,7 @@ RSpec.describe 'Security: contact form submission throttle' do
   # The endpoint's half of the contract: given a verdict, `save_form` refuses before it processes, or
   # stores and says nothing about limits. The verdict itself is exercised above; here it is fixed so
   # the branch is what is under test, not the counter.
-  describe 'save_form acting on the over-limit verdict', type: :request do
+  describe 'save_form acting on the over-limit verdict' do
     def stub_over_limit(verdict)
       allow_any_instance_of(Plugins::CamaContactForm::FrontController)
         .to receive(:submission_over_limit?).and_return(verdict)
