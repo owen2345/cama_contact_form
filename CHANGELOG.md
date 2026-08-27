@@ -4,7 +4,7 @@
 
 ### Security: contact-form submissions are rate-limited per IP
 
-`save_form` is public and unthrottled unless the form carries a captcha field, so a script could mail-bomb the owner and flood uploads and responses. Submissions are now capped per client IP per form in a rolling 15-minute window (`contact_form_max_submits`, default 10); the excess is refused before any mail, upload or row is written. Requires `camaleon_cms >= 2.9.4`, checked at load. Also fixes same-second responses colliding. [#77](https://github.com/owen2345/cama_contact_form/pull/77).
+The public `save_form` is now capped per client IP per form: past `contact_form_max_submits` stored submissions (default 10) in a fixed 15-minute window, the excess is refused before any mail, upload or row. Only stored submissions count; a real cap needs a shared cache store. Requires `camaleon_cms >= 2.9.4`, checked at boot. Also stops a stored response being resubmitted as a form, and same-second responses colliding. [#77](https://github.com/owen2345/cama_contact_form/pull/77).
 
 ## 0.1.13
 
