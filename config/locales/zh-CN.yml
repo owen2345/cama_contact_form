@@ -106,3 +106,4 @@ zh-CN:
           error_form_val: '引发了一个错误，请重试！'
           invalid_content_val: '您的消息包含不允许使用的字符。请删除所有 HTML 或双引号后重试。'
           invalid_request_val: '无法提交该表单。请重试。'
+          too_many_requests: '来自您网络的提交次数过多。请稍等几分钟后重试。'
