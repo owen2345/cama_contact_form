@@ -21,8 +21,9 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
     hooks_run('contact_form_before_submit', args)
     if args[:flag]
       # Refuse a flood before it can mail, upload or write a row. Keyed on @form, so a bogus id
-      # (which perform_save_form rejects anyway) is left to it rather than throttled against no form.
-      if @form.present? && submission_throttled?(@form)
+      # (which perform_save_form rejects anyway, cheaply) is left to it rather than throttled against
+      # no form.
+      if @form.present? && submission_over_limit?(@form)
         errors << t('.too_many_requests',
                     default: 'Too many submissions from your network. Please wait a few minutes and try again.')
       else

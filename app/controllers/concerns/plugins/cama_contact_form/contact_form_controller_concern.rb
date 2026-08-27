@@ -61,6 +61,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
                                               description: form.description,
                                               settings: new_settings, site_id: form.site_id, parent_id: form.id)
     if form_new.save
+      record_submission(form)
       fields_data = convert_form_values(form, fields)
       message_body = form.mail_settings[:body].to_s.translate.cama_replace_codes(fields)
       content = render_to_string(partial: plugin_view('contact_form/email_content'), layout: false, formats: [:html],
@@ -119,25 +120,43 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     address if address.match?(URI::MailTo::EMAIL_REGEXP)
   end
 
-  # Records this submission against a per-IP, per-form counter and returns whether it has
-  # overrun the window's budget, so `save_form` can refuse the excess before any mail, upload or row
-  # is written -- the endpoint is public and, unless the form carries a captcha field, otherwise
-  # unthrottled.
+  # Whether this client IP has already used up its budget for this form in the current window, so
+  # `save_form` can refuse the excess before any mail, upload or row is written -- the endpoint is
+  # public and, unless the form carries a captcha field, otherwise unthrottled. A read only: only a
+  # *stored* submission spends budget (see `record_submission`), so a flood of submissions that fail
+  # validation -- or that never solve a captcha -- cannot exhaust the window and lock out a co-NAT
+  # visitor whose own submission is valid.
+  def submission_over_limit?(form)
+    Rails.cache.read(submission_throttle_key(form), raw: true).to_i >= submission_limit
+  end
+
+  # Spend one unit of this IP's per-form budget, called once a row has actually been written so the
+  # cap tracks resource-consuming submissions rather than mere attempts.
   #
-  # The counter is an ATOMIC Rails.cache increment (the pattern camaleon_cms's login throttle uses): `raw:
-  # true` keeps the value a bare integer so Redis/Memcached INCR is atomic (a harmless no-op on
-  # Memory/File stores), and the TTL is refreshed on every hit so a sustained flood keeps the window
-  # alive. Older Memory/File stores (Rails < 7.1) return nil for a missing key instead of seeding it
-  # -- seed it then. It fails open on a null cache store: the throttle is only as strong as the host's
-  # configured cache, which is the operator's call.
-  def submission_throttled?(form)
-    key = "cama_contact_form_submit:#{current_site.id}:#{request.remote_ip}:#{form.id}"
-    count = Rails.cache.increment(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, raw: true)
-    if count.nil?
-      Rails.cache.write(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, raw: true)
-      count = 1
-    end
-    count > submission_limit
+  # The counter is an ATOMIC Rails.cache increment (the pattern camaleon_cms's login throttle uses):
+  # `raw: true` keeps the value a bare integer so Redis/Memcached INCR is atomic (a harmless no-op on
+  # Memory/File stores). Older Memory/File stores (Rails < 7.1) return nil for a missing key instead
+  # of seeding it; seed it then, with `unless_exist` so the seed can never overwrite a counter a
+  # concurrent request has already advanced.
+  #
+  # The window is FIXED, not sliding: the TTL is anchored when the key is first written and not
+  # refreshed on later increments (ActiveSupport preserves the original `expires_at`, and
+  # Redis/Memcached only set a TTL at creation), so the budget resets in full once the window since
+  # the first stored submission elapses. The throttle is only as strong as the host's cache: it fails
+  # open on a null store, and on a per-process store (Rails' default MemoryStore, or FileStore across
+  # hosts) each worker counts on its own, so an effective cap needs a shared store (Redis/Memcached).
+  # The key is the client IP as camaleon_cms resolves it (`request.remote_ip`), so it is only as
+  # trustworthy as the app's trusted-proxy configuration.
+  def record_submission(form)
+    key = submission_throttle_key(form)
+    counted = Rails.cache.increment(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, raw: true)
+    return unless counted.nil?
+
+    Rails.cache.write(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, unless_exist: true, raw: true)
+  end
+
+  def submission_throttle_key(form)
+    "cama_contact_form_submit:#{current_site.id}:#{request.remote_ip}:#{form.id}"
   end
 
   # The per-window budget from `contact_form_max_submits`, as a positive integer. get_option hands
