@@ -183,8 +183,13 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   # to 0 and refuse every submission (or every attachment) site-wide. Anything that is not a
   # positive integer falls back to the default rather than 500-ing or silently bricking the form; to
   # loosen a limit an operator sets a higher positive integer.
+  #
+  # A String is parsed in base 10 explicitly: to_var stores only canonical numerals as numbers, so
+  # a typed "010" survives as a String, and bare Integer() would read its leading zero as octal --
+  # a silently wrong limit. Base 10 reads it as ten, and rejects "0x10" into the fallback.
   def positive_site_option(name, default)
-    parsed = Integer(current_site.get_option(name, default), exception: false)
+    value = current_site.get_option(name, default)
+    parsed = value.is_a?(String) ? Integer(value, 10, exception: false) : Integer(value, exception: false)
     parsed&.positive? ? parsed : default
   end
 

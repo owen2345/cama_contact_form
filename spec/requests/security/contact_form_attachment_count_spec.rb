@@ -164,5 +164,15 @@ RSpec.describe 'Security: contact form attachment count cap' do
       site.set_option('contact_form_max_files', 'unlimited')
       expect(effective_limit).to eq(5)
     end
+
+    # to_var stores only canonical numerals as numbers, so a typed "010" survives as a String --
+    # and bare Integer() would read its leading zero as octal 8, a silently wrong limit.
+    it 'reads a leading-zero string as decimal and rejects a radix prefix' do
+      site.set_option('contact_form_max_files', '010')
+      expect(effective_limit).to eq(10)
+
+      site.set_option('contact_form_max_files', '0x10')
+      expect(effective_limit).to eq(5)
+    end
   end
 end
