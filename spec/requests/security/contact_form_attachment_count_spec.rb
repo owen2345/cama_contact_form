@@ -95,6 +95,19 @@ RSpec.describe 'Security: contact form attachment count cap' do
     expect(flash[:contact_form][:error]).to include('2')
   end
 
+  # The under-cap sibling of the refuse-whole rule: a submission whose file fails its own upload
+  # (core's size cap, the content scan) still stores and mails, and used to report unqualified
+  # success -- the dropped file silently trimmed. The upload error now rides along with the notice.
+  it 'reports a failed upload alongside the success message instead of swallowing it' do
+    allow_any_instance_of(Plugins::CamaContactForm::FrontController)
+      .to receive(:cama_tmp_upload).and_return({ error: 'File size limit exceeded' })
+
+    expect { submit_contact_form(form, { c1: uploads(1) }) }.to change { form.responses.count }.by(1)
+
+    expect(flash[:contact_form][:notice]).to be_present
+    expect(flash[:contact_form][:error]).to include('File size limit exceeded')
+  end
+
   # The refusal message is author-customizable through the `invalid_files_count` form message, like
   # the content gate's `invalid_content` -- which takes two halves: the editor's permit must keep
   # the key (an unlisted key is stripped from every save, erasing the message however it was set),

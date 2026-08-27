@@ -31,6 +31,11 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
       end
       if success.present?
         flash[:contact_form][:notice] = success.join('<br>')
+        # Success and errors coexist on exactly one path: the submission stored and mailed, but a
+        # file failed its upload (over core's size cap, or refused by the content scan). Showing
+        # only the notice told the visitor everything arrived when a file they sent was dropped --
+        # the errors ride along so the success never silently trims the submission.
+        flash[:contact_form][:error] = errors.join('<br>') if errors.present?
       else
         flash[:contact_form][:error] = errors.join('<br>')
         # Redisplaying the submission is the only reason it ever reaches the page, so a submission
