@@ -8,7 +8,11 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
   # here add your custom functions
   def save_form
     flash[:contact_form] = {}
-    @form = current_site.contact_forms.find_by(id: params[:id])
+    # `parent_id: nil` restricts the lookup to authored forms. `contact_forms` also holds every stored
+    # response (a child row, `parent_id` set), and a response's `fields` is empty, so it sails through
+    # validation -- submitting a response's id would write a fresh child row and open it its own throttle
+    # budget, so the flood cap could be lapped by walking the (sequential, guessable) response ids.
+    @form = current_site.contact_forms.find_by(id: params[:id], parent_id: nil)
     fields = params[:fields]
     errors = []
     success = []
@@ -16,7 +20,15 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
     args = { form: @form, values: fields, flag: true }
     hooks_run('contact_form_before_submit', args)
     if args[:flag]
-      perform_save_form(@form, fields, success, errors)
+      # Refuse a flood before it can mail, upload or write a row. Keyed on @form, so a bogus id
+      # (which perform_save_form rejects anyway, cheaply) is left to it rather than throttled against
+      # no form.
+      if @form.present? && submission_over_limit?(@form)
+        errors << t('.too_many_requests',
+                    default: 'Too many submissions from your network. Please wait a few minutes and try again.')
+      else
+        perform_save_form(@form, fields, success, errors)
+      end
       if success.present?
         flash[:contact_form][:notice] = success.join('<br>')
       else

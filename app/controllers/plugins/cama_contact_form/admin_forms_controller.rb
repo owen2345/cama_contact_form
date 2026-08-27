@@ -6,23 +6,10 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern
 
-  # The markup gate delegates to CamaleonCms::UnsafeMarkup, which ships in camaleon_cms >= 2.9.3. That
-  # floor is not expressible as a gemspec dependency -- camaleon_cms depends on this gem, so a reverse
-  # pin would be circular -- and camaleon_cms 2.9.2 pins `cama_contact_form ~> 0.1.0`, wide enough to
-  # resolve this release against a core that lacks the detector. Fail fast and clearly at load, rather
-  # than with a bare NameError deep inside the first untrusted save: without the detector nothing can
-  # be gated, so the plugin must not run at all against an incompatible core.
-  def self.core_markup_detector_available?
-    defined?(CamaleonCms::UnsafeMarkup) ? true : false
-  end
-
-  def self.ensure_core_markup_detector!
-    return if core_markup_detector_available?
-
-    raise "cama_contact_form #{::CamaContactForm::VERSION} requires camaleon_cms >= 2.9.3 " \
-          '(CamaleonCms::UnsafeMarkup is unavailable).'
-  end
-  ensure_core_markup_detector!
+  # The markup gate below delegates to CamaleonCms::UnsafeMarkup (camaleon_cms >= 2.9.4); the version
+  # floor that guarantees it -- and the front_cache fix the submission throttle needs -- is enforced at
+  # boot by CamaContactForm::CoreCompatibility, from the engine initializer, so it holds for every
+  # controller in every load mode rather than only where this class body happens to load.
 
   before_action :set_form, only: %w[show edit update destroy]
   add_breadcrumb I18n.t('plugins.cama_contact_form.title', default: 'Contact Form'),
@@ -196,7 +183,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
   # A well-formed translation marker (`<!--:-->`, `<!--:en-->`). `rendered_forms` strips these to
   # produce the marker-free string the renderer emits, so the gate judges that form too. Reused from
-  # the core detector rather than re-spelled: the markers this strips and the ones
+  # CamaleonCms::UnsafeMarkup's own constant rather than re-spelled: the markers this strips and the ones
   # CamaleonCms::UnsafeMarkup scans around must share one grammar for the gate to stay sound, so they
   # share one constant.
   TRANSLATION_MARKER = CamaleonCms::UnsafeMarkup::TRANSLATION_MARKER
@@ -547,7 +534,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     [string]
   end
 
-  # Each rendered form is judged by CamaleonCms::UnsafeMarkup, the core scan-and-reject detector this
+  # Each rendered form is judged by CamaleonCms::UnsafeMarkup, camaleon_cms's scan-and-reject detector this
   # gate is kept in parity with. It parses once and refuses the value when the safe-list scrubber
   # would remove anything, when a kept attribute smuggles markup (`title="&lt;img ...&gt;"` reaching a
   # `data-html` sink), when dangerous inline CSS survives, or when the value carries one of the

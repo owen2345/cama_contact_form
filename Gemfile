@@ -16,10 +16,9 @@ gemspec
 # gem 'byebug', group: [:development, :test]
 
 gem 'sprockets-rails', '>= 3.5.2'
-# Floor: the plugin's security model requires a core newer than 2.9.2 (the upload content scanner and
-# the save-time gate), so tests must never resolve to the vulnerable 2.9.2 (audit CF-8). The lockfile
-# is gitignored for a gem, so this floor is where the requirement is documented and enforced.
-gem 'camaleon_cms', '>= 2.9.3'
+# Floor enforced at boot by CamaContactForm::CoreCompatibility: 2.9.4 is where front_cache stopped
+# wiping Rails.cache (and the throttle counter) on every frontend POST.
+gem 'camaleon_cms', '>= 2.9.4'
 
 # Development/test dependencies (none are shipped in the packaged gem). A camaleon_cms-backed dummy
 # Rails app under spec/ is booted under RSpec.

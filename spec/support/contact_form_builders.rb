@@ -29,8 +29,16 @@ module ContactFormBuilders
     { label: 'Name', field_type: 'text', cid: cid, required: 'true', field_options: {} }.merge(overrides)
   end
 
+  # Publishing the fixture post is the harness acting as the site's administrator: camaleon_cms's
+  # content_shortcodes gate (camaleon_cms >= 2.9.4) fails closed when no acting user is in scope, and
+  # `unfiltered_content!` bypasses only the markup gate, not the shortcode gate. CurrentRequest is an
+  # ActiveSupport::CurrentAttributes, so `.set` scopes the acting user/site to the block and restores
+  # whatever an example had already arranged.
   def publish_form_on_sample_post(slug: 'contact')
-    site.the_post('sample-post').update!(content: "[forms slug='#{slug}']")
+    admin = CamaManager.get_user_class_name.constantize.find_by!(username: 'admin')
+    CurrentRequest.set(user: admin, site: site) do
+      site.the_post('sample-post').update!(content: "[forms slug='#{slug}']")
+    end
   end
 
   # The bare submission POST. Whether it succeeds or fails validation is the example's business;
@@ -42,4 +50,6 @@ end
 
 RSpec.configure do |config|
   config.include ContactFormBuilders, type: :request
+  # The throttle feature spec drives the same builders through a real browser.
+  config.include ContactFormBuilders, type: :feature
 end

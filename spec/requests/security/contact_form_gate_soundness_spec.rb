@@ -30,8 +30,10 @@ RSpec.describe 'Security: contact form gate soundness' do
     create(:user, role: slug, site: current_site)
   end
 
+  # Delegates to the shared builder, which arranges the acting administrator that core's
+  # content_shortcodes gate (camaleon_cms >= 2.9.4) requires for a shortcode-bearing save.
   def publish(target = form)
-    current_site.the_post('sample-post').update!(content: "[forms slug='#{target.slug}']")
+    publish_form_on_sample_post(slug: target.slug)
   end
 
   def render_page
@@ -466,7 +468,7 @@ RSpec.describe 'Security: contact form gate soundness' do
     # every visit raised NoMethodError until someone edited the database.
     it 'renders the public page instead of raising' do
       bare = current_site.contact_forms.create!(name: 'Bare', slug: 'bare')
-      current_site.the_post('sample-post').update!(content: "[forms slug='bare']")
+      publish_form_on_sample_post(slug: 'bare')
 
       expect { get '/sample-post' }.not_to raise_error
       expect(response).to have_http_status(:ok)

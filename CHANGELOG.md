@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security: contact-form submissions are rate-limited per IP
+
+The public `save_form` is now capped per client IP per form: past `contact_form_max_submits` stored submissions (default 10) in a fixed 15-minute window, the excess is refused before any mail, upload or row. Only stored submissions count; a real cap needs a shared cache store. Requires `camaleon_cms >= 2.9.4`, checked at boot. Also stops a stored response being resubmitted as a form, and same-second responses colliding. [#77](https://github.com/owen2345/cama_contact_form/pull/77).
+
 ## 0.1.13
 
 ### Security: the contact-form auto-reply validates its recipient (CF-1)

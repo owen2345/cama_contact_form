@@ -108,3 +108,4 @@ es:
           error_form_val: 'A ocurrido un error, por favor intente de nuevo'
           invalid_content_val: 'Su mensaje contiene caracteres que no están permitidos. Por favor, elimine cualquier HTML o comillas dobles e inténtelo de nuevo.'
           invalid_request_val: 'No se pudo enviar ese formulario. Por favor, inténtelo de nuevo.'
+          too_many_requests: 'Demasiados envíos desde tu red. Espera unos minutos e inténtalo de nuevo.'

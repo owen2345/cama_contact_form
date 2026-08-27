@@ -5,8 +5,10 @@ ENV['RAILS_ENV'] = 'test'
 require 'spec_helper'
 require File.expand_path('dummy/config/environment', __dir__)
 # The factories use Faker for unique names. It's a dev-group gem, so Bundler.require (which loads only
-# :default + :test in this env) doesn't pull it in -- require it explicitly.
+# :default + :test in this env) doesn't pull it in -- require it explicitly. Same for
+# factory_bot_rails: camaleon_cms >= 2.9.4 no longer force-requires it from its engine (#1280).
 require 'faker'
+require 'factory_bot_rails'
 
 # Refuse to run against a non-test environment: an exported RAILS_ENV must never point the suite's
 # schema load / transactional fixtures at a development or production database.
@@ -51,10 +53,12 @@ RSpec.configure do |config|
     CamaleonCms::Site.instance_variable_set(:@main_site, nil)
     PluginRoutes.instance_variable_set(:@all_sites, nil)
     PluginRoutes.instance_variable_get(:@cache)&.clear
-    # Core's brute-force counters live in Rails.cache (FileStore here) and outlive the per-example
-    # transaction, so clear them or a run of frontend submissions in one example bans the shared
-    # client IP for the next.
-    Rails.cache.delete_matched(/cama_captcha_attack|plugins_attack_ban/) if Rails.cache.respond_to?(:delete_matched)
+    # camaleon_cms's brute-force counters and this plugin's submission-throttle counter live in
+    # Rails.cache (FileStore here) and outlive the per-example transaction, so clear them or a run of
+    # frontend submissions in one example bans the shared client IP for the next.
+    if Rails.cache.respond_to?(:delete_matched)
+      Rails.cache.delete_matched(/cama_captcha_attack|plugins_attack_ban|cama_contact_form_submit/)
+    end
     # A between-example reset, not a scoped translation, so I18n.with_locale (a block) does not fit.
     I18n.locale = I18n.default_locale # rubocop:disable Rails/I18nLocaleAssignment
   end

@@ -23,6 +23,13 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     /<[a-zA-Z][^>]*\b(?:href|src|action|formaction|data|poster|srcdoc|background)\s*=\s*
        ["']?\s*(?:javascript|vbscript|data)\s*:/imx
 
+  # How many submissions one client IP may make to one form before the excess is refused, and the
+  # window that count rolls off over. The threshold is the site-wide `contact_form_max_submits` option
+  # (it tunes every form on the site at once, not one form); the window is camaleon_cms's own login
+  # throttle window, shared as one constant so the two cannot drift.
+  SUBMISSION_THROTTLE_WINDOW = CamaleonCms::CaptchaHelper::CAMA_ATTACK_WINDOW
+  SUBMISSION_THROTTLE_DEFAULT_MAX = 10
+
   def perform_save_form(form, fields, success, errors)
     attachments = []
     return unless validate_to_save_form(form, fields, errors)
@@ -47,9 +54,14 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       fields[f[:cid].to_sym] = file_paths
     end
     new_settings = { 'fields' => fields, 'created_at' => Time.now.utc.strftime('%Y-%m-%d %H:%M:%S').to_s }.to_json
-    form_new = current_site.contact_forms.new(name: "response-#{Time.now.utc}", description: form.description,
+    # The random suffix keeps concurrent responses distinct: stamped only to the second, two visitors
+    # submitting within the same second parameterized to the same slug, and the site-scoped
+    # slug-uniqueness validation refused the second response with the generic error.
+    form_new = current_site.contact_forms.new(name: "response-#{Time.now.utc}-#{SecureRandom.hex(4)}",
+                                              description: form.description,
                                               settings: new_settings, site_id: form.site_id, parent_id: form.id)
     if form_new.save
+      record_submission(form)
       fields_data = convert_form_values(form, fields)
       message_body = form.mail_settings[:body].to_s.translate.cama_replace_codes(fields)
       content = render_to_string(partial: plugin_view('contact_form/email_content'), layout: false, formats: [:html],
@@ -74,10 +86,10 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     end
   end
 
-  # CF-1: the auto-reply ("confirmation e-mail") recipient is whatever the visitor typed into the field
+  # The auto-reply ("confirmation e-mail") recipient is whatever the visitor typed into the field
   # named by `to_answer`, so it is fully attacker-controlled -- unchecked, the feature sends mail from
   # the site's own From address to anyone. The reply goes to the normalized address, or nowhere.
-  # Volume across submissions is a separate concern (CF-2, rate limiting).
+  # Volume across submissions is a separate concern (rate limiting, below).
   #
   # A refused present value is logged -- otherwise the response is indistinguishable from full
   # success and a lost confirmation is undiagnosable. The line names the form, not the value: the
@@ -89,7 +101,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     value = fields[form.mail_settings[:to_answer].to_s.gsub(/(\[|\])/, '').to_sym]
     address = normalized_email_address(value)
     if address.nil? && value.present?
-      Rails.logger.warn("cama_contact_form: auto-reply for form #{form.id} skipped, recipient failed validation (CF-1)")
+      Rails.logger.warn("cama_contact_form: auto-reply for form #{form.id} skipped, recipient failed validation")
     end
     address
   end
@@ -106,6 +118,59 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   def normalized_email_address(value)
     address = value.to_s.strip
     address if address.match?(URI::MailTo::EMAIL_REGEXP)
+  end
+
+  # Whether this client IP has already used up its budget for this form in the current window, so
+  # `save_form` can refuse the excess before any mail, upload or row is written -- the endpoint is
+  # public and, unless the form carries a captcha field, otherwise unthrottled. A read only: only a
+  # *stored* submission spends budget (see `record_submission`), so a flood of submissions that fail
+  # validation -- or that never solve a captcha -- cannot exhaust the window and lock out a co-NAT
+  # visitor whose own submission is valid.
+  def submission_over_limit?(form)
+    Rails.cache.read(submission_throttle_key(form), raw: true).to_i >= submission_limit
+  end
+
+  # Spend one unit of this IP's per-form budget, called once a row has actually been written so the
+  # cap tracks resource-consuming submissions rather than mere attempts.
+  #
+  # The counter is an ATOMIC Rails.cache increment mirroring camaleon_cms's login throttle. Its helper
+  # (cama_captcha_increment_attack) is deliberately not reused: it also mutates session state, which
+  # this IP-only throttle must not do on a public, session-light request (and its unit spec drives a
+  # bare controller with no session). `raw: true` keeps the value a bare integer so Redis/Memcached
+  # INCR is atomic (a harmless no-op on Memory/File stores). Older Memory/File stores (Rails < 7.1)
+  # return nil for a missing key instead of seeding it; seed it then, with `unless_exist` so the seed
+  # can never overwrite a counter a concurrent request has already advanced.
+  #
+  # The window is FIXED, not sliding: the TTL is anchored when the key is first written and not
+  # refreshed on later increments (ActiveSupport preserves the original `expires_at`, and
+  # Redis/Memcached only set a TTL at creation), so the budget resets in full once the window since
+  # the first stored submission elapses. The throttle is only as strong as the host's cache: it fails
+  # open on a null store, and on a per-process store (Rails' default MemoryStore, or FileStore across
+  # hosts) each worker counts on its own, so an effective cap needs a shared store (Redis/Memcached).
+  # The key is the client IP as camaleon_cms resolves it (`request.remote_ip`), so it is only as
+  # trustworthy as the app's trusted-proxy configuration.
+  def record_submission(form)
+    key = submission_throttle_key(form)
+    counted = Rails.cache.increment(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, raw: true)
+    return unless counted.nil?
+
+    Rails.cache.write(key, 1, expires_in: SUBMISSION_THROTTLE_WINDOW, unless_exist: true, raw: true)
+  end
+
+  def submission_throttle_key(form)
+    "cama_contact_form_submit:#{current_site.id}:#{request.remote_ip}:#{form.id}"
+  end
+
+  # The per-window budget from `contact_form_max_submits`, as a positive integer. get_option hands
+  # back whatever was stored, and camaleon_cms's set_option runs values through String#to_var -- so a
+  # "true"/"false" option is a boolean (and `false.to_i` raises), a cleared one is nil, and a stray
+  # "unlimited"/0 would coerce to 0 and refuse every submission site-wide. Anything that is not a
+  # positive integer falls back to the default rather than 500-ing or silently bricking the form; to
+  # loosen the throttle an operator sets a higher positive integer.
+  def submission_limit
+    configured = current_site.get_option('contact_form_max_submits', SUBMISSION_THROTTLE_DEFAULT_MAX)
+    parsed = Integer(configured, exception: false)
+    parsed&.positive? ? parsed : SUBMISSION_THROTTLE_DEFAULT_MAX
   end
 
   # A visitor's submission is rejected, not escaped, for the same reason an untrusted author's is:

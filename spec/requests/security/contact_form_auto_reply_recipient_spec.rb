@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-# CF-1 (SECURITY-AUDIT-2026-08-11): the contact form's optional auto-reply ("confirmation e-mail")
+# The contact form's optional auto-reply ("confirmation e-mail")
 # sends to whatever address the visitor typed into the field named by `to_answer` -- an
 # unauthenticated, fully attacker-controlled recipient. Unchecked, it turns the site into an email
 # cannon firing from the site's own From address and reputation. The recipient is now validated to a
 # single well-formed address before the auto-reply is sent, so one submission can neither header-inject
 # (a Bcc to thousands) nor fan out to a recipient list. The owner notification -- an author-configured
-# recipient -- is unaffected, and per-submission volume is out of scope here (CF-2, rate limiting).
+# recipient -- is unaffected, and per-submission volume is out of scope here (rate limiting).
 RSpec.describe 'Security: contact form auto-reply recipient' do
   # A form whose auto-reply is configured: `to_answer` points at field c1, so the visitor's own c1
   # value becomes the confirmation recipient. `build_form` comes from
@@ -98,7 +98,7 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
 
       submit('victim@example.com attacker@evil.com', to: text_form)
 
-      expect(logged.join).to include("form #{text_form.id}", 'CF-1')
+      expect(logged.join).to include("form #{text_form.id}", 'failed validation')
       expect(logged.join).not_to include('attacker@evil.com')
     end
   end
@@ -145,7 +145,7 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
 
       submit('real.person@submitter.example')
 
-      expect(logged.join).not_to include('CF-1')
+      expect(logged.join).not_to include('auto-reply')
     end
   end
 
