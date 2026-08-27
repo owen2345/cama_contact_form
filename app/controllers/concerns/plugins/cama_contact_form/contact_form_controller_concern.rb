@@ -270,24 +270,19 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
 
   # form validations
   def validate_to_save_form(form, fields, errors)
-    # Refuse outright and stop, before any other validation runs.
-    #
-    # Nothing is stored either way, so there is nothing to gain by continuing -- and continuing means
-    # running the rest of this method over input already known to be hostile, including a reCAPTCHA
-    # round-trip to an external service.
+    # One refusal, outright and first, for every shape no real form produces -- a missing form, a
+    # non-hash fields, a forged file-field value. Each is a forged request, not a validation error
+    # the visitor can act on; nothing is stored either way, so there is nothing to gain by
+    # continuing -- and continuing means running the rest of this method over input already known
+    # to be hostile, including a reCAPTCHA round-trip to an external service. Rejecting the file
+    # shapes is also what keeps forged entries away from the uploader (see
+    # malformed_file_submission?, whose walk the earlier disjuncts' short-circuit vouches for).
     #
     # The message names no field and quotes nothing back. The frontend flash partial renders with
     # `raw`, so echoing the refused value there would make the refusal itself an injection sink --
     # the same trap as the admin path.
-    if form.blank? || !(fields.is_a?(Hash) || fields.is_a?(ActionController::Parameters))
-      errors << t('.invalid_request_val', default: 'That form could not be submitted. Please try again.')
-      return false
-    end
-
-    # Refused for the same reason, with the same message: a shape no real form produces is a forged
-    # request, not a validation error the visitor can act on. Rejection is also what keeps the
-    # forged entries away from the uploader -- see malformed_file_submission?.
-    if malformed_file_submission?(form, fields)
+    if form.blank? || !(fields.is_a?(Hash) || fields.is_a?(ActionController::Parameters)) ||
+       malformed_file_submission?(form, fields)
       errors << t('.invalid_request_val', default: 'That form could not be submitted. Please try again.')
       return false
     end
@@ -385,20 +380,13 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   end
 
   # The number of entries perform_save_form's upload loop would iterate for this submission:
-  # everything submitted under a file field. The shape gate above has already refused anything that
-  # is not an array of uploaded files, so an Array counts its entries and an absent value counts
-  # nothing; the remaining branch only keeps the method total for a caller that has not asked the
-  # gate first.
+  # everything submitted under a file field. The shape gate has already refused anything that is
+  # not an absent value or an array of uploaded files, so this is those arrays' sizes summed --
+  # `Array()` keeps the sum total without a shape judgment of its own, the same counting
+  # convert_form_values uses.
   def attachment_count(form, fields)
     form.fields.sum do |f|
-      next 0 unless f[:field_type] == 'file'
-
-      value = fields[f[:cid].to_sym]
-      if value.is_a?(Array)
-        value.size
-      else
-        value.blank? ? 0 : 1
-      end
+      f[:field_type] == 'file' ? Array(fields[f[:cid].to_sym]).size : 0
     end
   end
 
