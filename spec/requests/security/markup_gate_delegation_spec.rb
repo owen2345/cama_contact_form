@@ -7,20 +7,20 @@ require 'rails_helper'
 RSpec.describe 'Security: markup gate delegation' do
   let(:controller_class) { Plugins::CamaContactForm::AdminFormsController }
 
-  describe 'core markup detector requirement' do
-    # The detector ships in camaleon_cms >= 2.9.3. The floor cannot live in the gemspec (camaleon_cms
-    # depends on this gem, so a reverse pin would be circular), so the plugin verifies it at load and
-    # fails with an actionable message instead of a bare NameError in the first untrusted save.
+  describe 'compatible core requirement' do
+    # The floor cannot live in the gemspec (camaleon_cms depends on this gem, so a reverse pin would
+    # be circular), so the plugin verifies the core version at load and fails with an actionable
+    # message instead of a broken gate or an ineffective throttle at the first untrusted request.
     it 'is satisfied in this environment' do
-      expect(controller_class.core_markup_detector_available?).to be(true)
-      expect { controller_class.ensure_core_markup_detector! }.not_to raise_error
+      expect(controller_class.compatible_core?).to be(true)
+      expect { controller_class.ensure_compatible_core! }.not_to raise_error
     end
 
-    it 'fails closed with an actionable error when the detector is unavailable' do
-      allow(controller_class).to receive(:core_markup_detector_available?).and_return(false)
+    it 'fails closed with an actionable error against an incompatible core' do
+      allow(controller_class).to receive(:compatible_core?).and_return(false)
 
-      expect { controller_class.ensure_core_markup_detector! }
-        .to raise_error(/requires camaleon_cms >= 2\.9\.3/)
+      expect { controller_class.ensure_compatible_core! }
+        .to raise_error(/requires camaleon_cms >= 2\.9\.4/)
     end
   end
 

@@ -6,23 +6,25 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern
 
-  # The markup gate delegates to CamaleonCms::UnsafeMarkup, which ships in camaleon_cms >= 2.9.3. That
-  # floor is not expressible as a gemspec dependency -- camaleon_cms depends on this gem, so a reverse
-  # pin would be circular -- and camaleon_cms 2.9.2 pins `cama_contact_form ~> 0.1.0`, wide enough to
-  # resolve this release against a core that lacks the detector. Fail fast and clearly at load, rather
-  # than with a bare NameError deep inside the first untrusted save: without the detector nothing can
-  # be gated, so the plugin must not run at all against an incompatible core.
-  def self.core_markup_detector_available?
-    defined?(CamaleonCms::UnsafeMarkup) ? true : false
+  # The markup gate delegates to CamaleonCms::UnsafeMarkup, and the submission throttle counts in
+  # Rails.cache -- which cores before 2.9.4 wiped on every frontend POST (the bundled front_cache
+  # plugin), leaving the throttle unable to ever trigger. The floor is not expressible as a gemspec
+  # dependency -- camaleon_cms depends on this gem, so a reverse pin would be circular -- and older
+  # cores pin `cama_contact_form` wide enough to resolve this release. Fail fast and clearly at
+  # load, rather than with a broken gate or an ineffective throttle at the first untrusted request.
+  MINIMUM_CORE_VERSION = '2.9.4'
+
+  def self.compatible_core?
+    defined?(CamaleonCms::VERSION) &&
+      Gem::Version.new(CamaleonCms::VERSION) >= Gem::Version.new(MINIMUM_CORE_VERSION)
   end
 
-  def self.ensure_core_markup_detector!
-    return if core_markup_detector_available?
+  def self.ensure_compatible_core!
+    return if compatible_core?
 
-    raise "cama_contact_form #{::CamaContactForm::VERSION} requires camaleon_cms >= 2.9.3 " \
-          '(CamaleonCms::UnsafeMarkup is unavailable).'
+    raise "cama_contact_form #{::CamaContactForm::VERSION} requires camaleon_cms >= #{MINIMUM_CORE_VERSION}."
   end
-  ensure_core_markup_detector!
+  ensure_compatible_core!
 
   before_action :set_form, only: %w[show edit update destroy]
   add_breadcrumb I18n.t('plugins.cama_contact_form.title', default: 'Contact Form'),
