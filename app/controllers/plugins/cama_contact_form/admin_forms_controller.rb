@@ -6,25 +6,10 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   include Plugins::CamaContactForm::MainHelper
   include Plugins::CamaContactForm::ContactFormControllerConcern
 
-  # The markup gate delegates to CamaleonCms::UnsafeMarkup, and the submission throttle counts in
-  # Rails.cache -- which camaleon_cms before 2.9.4 wiped on every frontend POST (the bundled front_cache
-  # plugin), leaving the throttle unable to ever trigger. The floor is not expressible as a gemspec
-  # dependency -- camaleon_cms depends on this gem, so a reverse pin would be circular -- and older
-  # camaleon_cms releases pin `cama_contact_form` wide enough to resolve this release. Fail fast and clearly at
-  # load, rather than with a broken gate or an ineffective throttle at the first untrusted request.
-  MINIMUM_CORE_VERSION = '2.9.4'
-
-  def self.compatible_core?
-    defined?(CamaleonCms::VERSION) &&
-      Gem::Version.new(CamaleonCms::VERSION) >= Gem::Version.new(MINIMUM_CORE_VERSION)
-  end
-
-  def self.ensure_compatible_core!
-    return if compatible_core?
-
-    raise "cama_contact_form #{::CamaContactForm::VERSION} requires camaleon_cms >= #{MINIMUM_CORE_VERSION}."
-  end
-  ensure_compatible_core!
+  # The markup gate below delegates to CamaleonCms::UnsafeMarkup (camaleon_cms >= 2.9.4); the version
+  # floor that guarantees it -- and the front_cache fix the submission throttle needs -- is enforced at
+  # boot by CamaContactForm::CoreCompatibility, from the engine initializer, so it holds for every
+  # controller in every load mode rather than only where this class body happens to load.
 
   before_action :set_form, only: %w[show edit update destroy]
   add_breadcrumb I18n.t('plugins.cama_contact_form.title', default: 'Contact Form'),
