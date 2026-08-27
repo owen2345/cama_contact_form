@@ -212,13 +212,15 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   MAX_OPTIONS_PER_FIELD = 100
   MAX_GATED_VALUE_BYTES = 64 * 1024
 
-  # The messages the form editor offers, plus `invalid_content`, which the gate itself emits.
+  # The messages the form editor offers, plus the ones the save-time gates themselves emit
+  # (`invalid_content`, `invalid_files_count`) -- a key missing here is not merely un-offered, it is
+  # stripped from every editor save, so a message set any other way would be silently erased.
   #
   # Permitted rather than taken wholesale. `railscf_message` used to go straight from params into the
   # gate, which runs a full Loofah parse per leaf -- so the number of parses was chosen by the caller.
   # Permitting also stops unbounded junk being persisted into `settings.to_json`.
   MESSAGE_KEYS = %w[mail_sent_ok mail_sent_ng validation_error invalid_required invalid_email
-                    captcha_not_match invalid_content].freeze
+                    captcha_not_match invalid_content invalid_files_count].freeze
 
   private
 
@@ -473,8 +475,18 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # Returns the name of the first malformed structural value, or nil. Same rule: the key only, never
   # the value the author submitted.
   def first_malformed_structural_key(fields)
+    seen_cids = {}
     fields.each do |field|
-      return 'cid' unless at(field, :cid).to_s.match?(CID_FORMAT)
+      cid = at(field, :cid).to_s
+      return 'cid' unless cid.match?(CID_FORMAT)
+      # A duplicate is as forged as a bad format: the editor generates cids (`c1, c2, ...`) and
+      # keys the params by them, so two fields sharing one can only arrive by hand. Stored, they
+      # collide everywhere downstream -- the renderer emits colliding input names, and every
+      # per-field consumer reads one field's submitted value as the other's (the attachment
+      # counter would count it twice; the upload loop 500s on its own second pass).
+      return 'cid' if seen_cids.key?(cid)
+
+      seen_cids[cid] = true
 
       type = at(field, :field_type).to_s
       return 'field type' unless FIELD_TYPES.include?(type)

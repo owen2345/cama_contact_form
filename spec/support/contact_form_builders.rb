@@ -29,6 +29,34 @@ module ContactFormBuilders
     { label: 'Name', field_type: 'text', cid: cid, required: 'true', field_options: {} }.merge(overrides)
   end
 
+  def file_field(cid: 'c1', label: 'Docs', **overrides)
+    { label: label, field_type: 'file', cid: cid, required: 'false', field_options: {} }.merge(overrides)
+  end
+
+  # Rack::Test uploads of the shared PNG fixture. The path escapes the dummy-app root, so it lives
+  # here once rather than in every spec that attaches a file.
+  def png_uploads(count = 1)
+    Array.new(count) do
+      Rack::Test::UploadedFile.new(Rails.root.join('../support/fixtures/rails.png'), 'image/png')
+    end
+  end
+
+  # Spies on the seam `cama_send_email` calls (`CamaleonCms::HtmlMailer.sender(recipient, ...)`) and
+  # returns the array recipients land in, in call order -- the exact argument position production
+  # uses, independent of delivery mechanics: ActiveJob is loaded (the action_mailer railtie requires
+  # its railtie despite the dummy app not asking for it) and the test queue adapter enqueues
+  # `deliver_later` without ever performing, so `ActionMailer::Base.deliveries` can prove absence,
+  # but not who a mail went to. Install it before the request under test -- when wrapped in a lazy
+  # `let`, reference it from a `before`.
+  def spy_on_mail_recipients
+    sent_to = []
+    allow(CamaleonCms::HtmlMailer).to receive(:sender) do |recipient, *_|
+      sent_to << recipient
+      instance_double(ActionMailer::MessageDelivery, deliver_later: nil)
+    end
+    sent_to
+  end
+
   # Publishing the fixture post is the harness acting as the site's administrator: camaleon_cms's
   # content_shortcodes gate (camaleon_cms >= 2.9.4) fails closed when no acting user is in scope, and
   # `unfiltered_content!` bypasses only the markup gate, not the shortcode gate. CurrentRequest is an

@@ -656,10 +656,9 @@ RSpec.describe 'Security: contact form gate soundness' do
       f = build_form(fields: [{ label: 'Doc', field_type: 'file', cid: 'c1', required: 'false',
                                 field_options: {} }])
       publish(f)
-      upload = Rack::Test::UploadedFile.new(Rails.root.join('../support/fixtures/rails.png'), 'image/png')
 
       expect do
-        post '/plugins/cama_contact_form/save_form', params: { id: f.id, fields: { c1: [upload] } }
+        post '/plugins/cama_contact_form/save_form', params: { id: f.id, fields: { c1: png_uploads } }
       end.to change { f.responses.count }.by(1)
     end
 

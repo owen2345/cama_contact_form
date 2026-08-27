@@ -35,23 +35,16 @@ RSpec.describe 'Security: contact form auto-reply recipient' do
                settings: { 'railscf_mail' => auto_reply_mail_settings })
   end
 
-  # Every recipient handed to the mailer, in call order. Spying on the seam `cama_send_email` calls
-  # (`CamaleonCms::HtmlMailer.sender(recipient, subject, args)`) captures the recipient at the exact
-  # argument position production uses, independent of delivery mechanics: ActiveJob is loaded (the
-  # action_mailer railtie requires its railtie despite the dummy app not asking for it) and the test
-  # queue adapter enqueues `deliver_later` without ever performing, so `ActionMailer::Base.deliveries`
-  # would stay empty here whatever was sent -- it can prove absence, but not who a mail went to.
-  let(:sent_to) { [] }
+  # Every recipient handed to the mailer, in call order (see spy_on_mail_recipients in
+  # spec/support/contact_form_builders.rb for why the seam, and why deliveries cannot prove this).
+  let(:sent_to) { spy_on_mail_recipients }
 
   # No page is published or rendered here: save_form looks the form up purely by params[:id]
   # (front_controller.rb) and every example only POSTs, so the shortcode-on-a-post setup the
   # page-rendering siblings need has no place in this file.
   before do
     form
-    allow(CamaleonCms::HtmlMailer).to receive(:sender) do |recipient, *_|
-      sent_to << recipient
-      instance_double(ActionMailer::MessageDelivery, deliver_later: nil)
-    end
+    sent_to
   end
 
   # The complete railscf_mail an auto-reply-enabled form needs -- `build_form`'s settings merge is

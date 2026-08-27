@@ -351,6 +351,24 @@ RSpec.describe 'Security: contact form content rejection' do
       expect(flash[:error]).to include('cid')
     end
 
+    # The editor generates cids and keys the params by them, so a duplicate can only arrive by
+    # hand -- and stored, two fields would read each other's submitted value everywhere a field is
+    # looked up by cid.
+    it 'refuses two fields sharing a cid' do
+      field = { label: 'A', field_type: 'text', cid: 'c1', required: 'false',
+                field_options: { template: '<div>[ci]</div>' } }
+      patch "/admin/plugins/cama_contact_form/admin_forms/#{form.id}", params: {
+        plugins_cama_contact_form_cama_contact_form: { name: 'Contact', slug: 'contact' },
+        railscf_mail: { to: 'a@b.c', subject: 's', body: 'b' },
+        railscf_message: {}, railscf_form_button: { name_button: 'Send' },
+        fields: { a: field, b: field.merge(label: 'B') }
+      }
+      form.reload
+
+      expect(form.fields).to be_blank
+      expect(flash[:error]).to include('cid')
+    end
+
     it 'refuses a field type outside the known set' do
       save_form_with(field_type: 'text" onfocus="alert(1)')
 
