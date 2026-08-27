@@ -6,6 +6,8 @@
 
 One public POST could attach unbounded many files, all persisted under `public/contact_form` and mailed. A submission is now refused whole past `contact_form_max_files` total files (default 5), before any upload, row or mail; the message is customizable as `invalid_files_count`. A file-field value no real form produces (anything but an array of uploaded files) is refused as invalid instead of raising a 500. [#81](https://github.com/owen2345/cama_contact_form/pull/81).
 
+Also: a file that fails its own upload is now reported alongside the success message instead of silently dropped, and the form editor refuses two fields sharing a `cid`.
+
 ### Tooling: Ruby 3.4.10 and RubyGems/Bundler 4.0.19
 
 Bumps the development toolchain to Ruby 3.4.10 (`.tool-versions`) and RubyGems/Bundler 4.0.19 across CI and the release workflow (RuboCop 1.90). The gemspec's `required_ruby_version` stays `>= 3.0`, so the packaged gem is unchanged. Development/CI only. [#80](https://github.com/owen2345/cama_contact_form/pull/80).
