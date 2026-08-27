@@ -279,6 +279,14 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       return false
     end
 
+    # Refused for the same reason, with the same message: a shape no real form produces is a forged
+    # request, not a validation error the visitor can act on. Rejection is also what keeps the
+    # forged entries away from the uploader -- see malformed_file_submission?.
+    if malformed_file_submission?(form, fields)
+      errors << t('.invalid_request_val', default: 'That form could not be submitted. Please try again.')
+      return false
+    end
+
     if unsafe_submitted?(form, fields)
       errors << form.the_message('invalid_content',
                                  t('.invalid_content_val',
@@ -345,12 +353,31 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     validate
   end
 
+  # Whether any file field carries a value no real form submission produces. The renderer encodes a
+  # file field as `fields[cid][]` file parts, and Rack drops an empty-filename part, so the only
+  # legitimate shapes are an absent value and an array of uploaded files; a bare string, a nested
+  # hash, a non-file entry -- each previously raised in the upload loop (`String#to_a`,
+  # `original_filename`), an unauthenticated 500.
+  #
+  # Refusing the whole submission, rather than skipping the forged entries, is load-bearing: a
+  # String that survived to cama_tmp_upload would be treated there as a URL to download or a local
+  # path to copy, and an anonymous visitor must never steer that.
+  def malformed_file_submission?(form, fields)
+    form.fields.any? do |f|
+      next false unless f[:field_type] == 'file'
+
+      value = fields[f[:cid].to_sym]
+      next false if value.blank?
+
+      !value.is_a?(Array) || !value.all?(ActionDispatch::Http::UploadedFile)
+    end
+  end
+
   # The number of entries perform_save_form's upload loop would iterate for this submission:
-  # everything submitted under a file field, whatever it turns out to be -- the cap bounds the
-  # loop's iterations, not just well-formed uploads. Total on any submitted shape (the submitter
-  # chooses the encoding): the renderer posts an array (`fields[cid][]`), so an Array counts its
-  # entries, an absent or blank value counts nothing, and any other present value counts as the one
-  # entry it is.
+  # everything submitted under a file field. The shape gate above has already refused anything that
+  # is not an array of uploaded files, so an Array counts its entries and an absent value counts
+  # nothing; the remaining branch only keeps the method total for a caller that has not asked the
+  # gate first.
   def attachment_count(form, fields)
     form.fields.sum do |f|
       next 0 unless f[:field_type] == 'file'

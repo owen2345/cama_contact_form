@@ -84,15 +84,6 @@ RSpec.describe 'Security: contact form attachment count cap' do
     expect(flash[:contact_form][:error]).to include('2')
   end
 
-  # The upload loop iterates whatever entries arrive under a file field, so the cap counts entries,
-  # not just well-formed uploads -- otherwise a flood of bogus entries would still drive the loop.
-  it 'counts entries that are not file uploads at all' do
-    site.set_option('contact_form_max_files', 2)
-
-    expect { submit_contact_form(form, { c1: %w[a b c] }) }.not_to(change { form.responses.count })
-    expect(flash[:contact_form][:error]).to include('2')
-  end
-
   # The threshold is a site option, and camaleon_cms stores option values through String#to_var --
   # the same trap `submission_limit` guards against (contact_form_throttle_limit_option_spec.rb):
   # only a positive integer is accepted, anything else falls back to the default rather than
