@@ -109,3 +109,4 @@ es:
           invalid_content_val: 'Su mensaje contiene caracteres que no están permitidos. Por favor, elimine cualquier HTML o comillas dobles e inténtelo de nuevo.'
           invalid_request_val: 'No se pudo enviar ese formulario. Por favor, inténtelo de nuevo.'
           too_many_requests: 'Demasiados envíos desde tu red. Espera unos minutos e inténtalo de nuevo.'
+          too_many_files_val: 'Demasiados archivos adjuntos (máximo %{max}). Elimina algunos archivos e inténtalo de nuevo.'

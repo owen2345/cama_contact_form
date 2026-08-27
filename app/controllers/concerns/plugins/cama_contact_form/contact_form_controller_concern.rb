@@ -30,6 +30,12 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   SUBMISSION_THROTTLE_WINDOW = CamaleonCms::CaptchaHelper::CAMA_ATTACK_WINDOW
   SUBMISSION_THROTTLE_DEFAULT_MAX = 10
 
+  # How many files one submission may attach across all of its file fields, before the whole
+  # submission is refused. Core bounds each file's size (`filesystem_max_size`); this bounds the
+  # count, so the two together bound what one anonymous POST can write to disk and stuff into the
+  # notification mail. The site-wide `contact_form_max_files` option overrides it.
+  ATTACHMENT_COUNT_DEFAULT_MAX = 5
+
   def perform_save_form(form, fields, success, errors)
     attachments = []
     return unless validate_to_save_form(form, fields, errors)
@@ -161,16 +167,25 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     "cama_contact_form_submit:#{current_site.id}:#{request.remote_ip}:#{form.id}"
   end
 
-  # The per-window budget from `contact_form_max_submits`, as a positive integer. get_option hands
-  # back whatever was stored, and camaleon_cms's set_option runs values through String#to_var -- so a
-  # "true"/"false" option is a boolean (and `false.to_i` raises), a cleared one is nil, and a stray
-  # "unlimited"/0 would coerce to 0 and refuse every submission site-wide. Anything that is not a
-  # positive integer falls back to the default rather than 500-ing or silently bricking the form; to
-  # loosen the throttle an operator sets a higher positive integer.
+  # The per-window budget from `contact_form_max_submits`, as a positive integer.
   def submission_limit
-    configured = current_site.get_option('contact_form_max_submits', SUBMISSION_THROTTLE_DEFAULT_MAX)
-    parsed = Integer(configured, exception: false)
-    parsed&.positive? ? parsed : SUBMISSION_THROTTLE_DEFAULT_MAX
+    positive_site_option('contact_form_max_submits', SUBMISSION_THROTTLE_DEFAULT_MAX)
+  end
+
+  # The per-submission attachment budget from `contact_form_max_files`, as a positive integer.
+  def attachment_limit
+    positive_site_option('contact_form_max_files', ATTACHMENT_COUNT_DEFAULT_MAX)
+  end
+
+  # A limit option, as a positive integer. get_option hands back whatever was stored, and
+  # camaleon_cms's set_option runs values through String#to_var -- so a "true"/"false" option is a
+  # boolean (and `false.to_i` raises), a cleared one is nil, and a stray "unlimited"/0 would coerce
+  # to 0 and refuse every submission (or every attachment) site-wide. Anything that is not a
+  # positive integer falls back to the default rather than 500-ing or silently bricking the form; to
+  # loosen a limit an operator sets a higher positive integer.
+  def positive_site_option(name, default)
+    parsed = Integer(current_site.get_option(name, default), exception: false)
+    parsed&.positive? ? parsed : default
   end
 
   # A visitor's submission is rejected, not escaped, for the same reason an untrusted author's is:
@@ -274,6 +289,21 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
 
     validate = true
 
+    # perform_save_form's file loop uploads and persists every entry submitted under a file field,
+    # so the entry count is budget the visitor spends -- bounded here, before any upload runs,
+    # rather than left to multiply against the per-file size cap. Over the cap the submission is
+    # refused whole, with the other validation errors: trimming to the first N would silently drop
+    # files the visitor believes they sent, and the file input is `multiple` with no client-side
+    # cap, so a legitimate visitor can hit this and needs the actionable message.
+    if attachment_count(form, fields) > attachment_limit
+      errors << form.the_message('invalid_files_count',
+                                 t('.too_many_files_val',
+                                   max: attachment_limit,
+                                   default: 'Too many files attached (maximum %{max}). ' \
+                                            'Please remove some files and try again.'))
+      validate = false
+    end
+
     form.fields.each do |f|
       cid = f[:cid].to_sym
       label = f[:label].to_sym
@@ -313,6 +343,25 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
       end
     end
     validate
+  end
+
+  # The number of entries perform_save_form's upload loop would iterate for this submission:
+  # everything submitted under a file field, whatever it turns out to be -- the cap bounds the
+  # loop's iterations, not just well-formed uploads. Total on any submitted shape (the submitter
+  # chooses the encoding): the renderer posts an array (`fields[cid][]`), so an Array counts its
+  # entries, an absent or blank value counts nothing, and any other present value counts as the one
+  # entry it is.
+  def attachment_count(form, fields)
+    form.fields.sum do |f|
+      next 0 unless f[:field_type] == 'file'
+
+      value = fields[f[:cid].to_sym]
+      if value.is_a?(Array)
+        value.size
+      else
+        value.blank? ? 0 : 1
+      end
+    end
   end
 
   # form values with labels + values to save

@@ -107,3 +107,4 @@ zh-CN:
           invalid_content_val: '您的消息包含不允许使用的字符。请删除所有 HTML 或双引号后重试。'
           invalid_request_val: '无法提交该表单。请重试。'
           too_many_requests: '来自您网络的提交次数过多。请稍等几分钟后重试。'
+          too_many_files_val: '附件文件过多（最多 %{max} 个）。请删除部分文件后重试。'
