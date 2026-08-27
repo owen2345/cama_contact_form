@@ -61,6 +61,17 @@ RSpec.describe 'Security: contact form attachment count cap' do
     expect(sent_to).to eq(['owner@example.com'])
   end
 
+  # The refusal must survive its own redisplay: the refused files used to ride along in
+  # flash[:values], and enough of them serialized the session cookie past its 4KB limit --
+  # ActionDispatch::Cookies::CookieOverflow, a 500 in place of the message -- so the stash now
+  # drops file values (a file input always redisplays empty anyway).
+  it 'refuses a far-over-cap submission with the message, not a session-cookie overflow' do
+    expect { submit_contact_form(form, { c1: uploads(10) }) }.not_to raise_error
+
+    expect(flash[:contact_form][:error]).to include('Too many files')
+    expect(flash[:values].to_unsafe_h).not_to have_key('c1')
+  end
+
   it 'honours a lowered contact_form_max_files option' do
     site.set_option('contact_form_max_files', 2)
 

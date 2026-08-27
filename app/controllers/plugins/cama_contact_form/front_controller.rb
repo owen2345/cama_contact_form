@@ -46,8 +46,16 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
         # `@form` is whatever `find_by_id` returned, which is nil for a deleted or bogus id -- a
         # POST anyone can make without credentials. `unsafe_submitted?` fails closed on that, so the
         # guard below is belt and braces for the `@form.id` read on the line after it.
+        # Uploads are dropped from the stash whether they arrive bare or -- the only shape the
+        # renderer produces -- as an array. They buy nothing (a file input always redisplays with
+        # value=""), and they cost the session: each file serializes as junk bytes into the cookie
+        # store, so a refused submission with enough attachments overflowed the 4KB cookie into a
+        # 500 -- on the over-cap refusal, for exactly the visitors the refusal message is for.
         if @form.present? && fields.respond_to?(:delete_if) && !unsafe_submitted?(@form, fields)
-          flash[:values] = fields.delete_if { |_k, v| v.instance_of?(::ActionDispatch::Http::UploadedFile) }
+          flash[:values] = fields.delete_if do |_k, v|
+            v.instance_of?(::ActionDispatch::Http::UploadedFile) ||
+              (v.is_a?(Array) && v.any?(::ActionDispatch::Http::UploadedFile))
+          end
           flash[:values_form_id] = @form.id
         end
       end
