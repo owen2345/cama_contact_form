@@ -1,6 +1,6 @@
 # CI for the plugin's own suite: RSpec (against a camaleon_cms-backed dummy Rails app, see spec/) and
 # RuboCop. Gemfile.lock is committed, so `bundler-cache: true` restores the exact, known gem set from
-# cache instead of resolving and installing every run; the pinned camaleon_cms (floored at >= 2.9.3 in
+# cache instead of resolving and installing every run; the pinned camaleon_cms (floored at >= 2.9.4 in
 # the Gemfile) is a current, non-vulnerable core.
 name: CI
 

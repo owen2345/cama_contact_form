@@ -16,8 +16,10 @@ gemspec
 # gem 'byebug', group: [:development, :test]
 
 gem 'sprockets-rails', '>= 3.5.2'
-# Matches the load-time floor in AdminFormsController: camaleon_cms before 2.9.4 lacks the markup detector and
-# wipe the submission-throttle counter on every frontend POST.
+# Matches the load-time floor in CamaContactForm::CoreCompatibility. The markup gate's
+# CamaleonCms::UnsafeMarkup has shipped since 2.9.3; camaleon_cms 2.9.4 is the floor because it also
+# stopped the bundled front_cache plugin from wiping Rails.cache -- and the submission-throttle
+# counter with it -- on every frontend POST.
 gem 'camaleon_cms', '>= 2.9.4'
 
 # Development/test dependencies (none are shipped in the packaged gem). A camaleon_cms-backed dummy
