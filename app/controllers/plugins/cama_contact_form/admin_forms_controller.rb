@@ -475,8 +475,18 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   # Returns the name of the first malformed structural value, or nil. Same rule: the key only, never
   # the value the author submitted.
   def first_malformed_structural_key(fields)
+    seen_cids = {}
     fields.each do |field|
-      return 'cid' unless at(field, :cid).to_s.match?(CID_FORMAT)
+      cid = at(field, :cid).to_s
+      return 'cid' unless cid.match?(CID_FORMAT)
+      # A duplicate is as forged as a bad format: the editor generates cids (`c1, c2, ...`) and
+      # keys the params by them, so two fields sharing one can only arrive by hand. Stored, they
+      # collide everywhere downstream -- the renderer emits colliding input names, and every
+      # per-field consumer reads one field's submitted value as the other's (the attachment
+      # counter would count it twice; the upload loop 500s on its own second pass).
+      return 'cid' if seen_cids.key?(cid)
+
+      seen_cids[cid] = true
 
       type = at(field, :field_type).to_s
       return 'field type' unless FIELD_TYPES.include?(type)
