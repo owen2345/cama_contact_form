@@ -31,17 +31,14 @@ module ContactFormBuilders
 
   # Publishing the fixture post is the harness acting as the site's administrator: camaleon_cms's
   # content_shortcodes gate (camaleon_cms >= 2.9.4) fails closed when no acting user is in scope, and
-  # `unfiltered_content!` bypasses only the markup gate, not the shortcode gate. Scoped save-and-
-  # restore rather than a bare reset, so an example that already arranged Current keeps it.
+  # `unfiltered_content!` bypasses only the markup gate, not the shortcode gate. CurrentRequest is an
+  # ActiveSupport::CurrentAttributes, so `.set` scopes the acting user/site to the block and restores
+  # whatever an example had already arranged.
   def publish_form_on_sample_post(slug: 'contact')
-    previous_user = CurrentRequest.user
-    previous_site = CurrentRequest.site
-    CurrentRequest.user = CamaManager.get_user_class_name.constantize.find_by!(username: 'admin')
-    CurrentRequest.site = site
-    site.the_post('sample-post').update!(content: "[forms slug='#{slug}']")
-  ensure
-    CurrentRequest.user = previous_user
-    CurrentRequest.site = previous_site
+    admin = CamaManager.get_user_class_name.constantize.find_by!(username: 'admin')
+    CurrentRequest.set(user: admin, site: site) do
+      site.the_post('sample-post').update!(content: "[forms slug='#{slug}']")
+    end
   end
 
   # The bare submission POST. Whether it succeeds or fails validation is the example's business;
