@@ -8,7 +8,11 @@ class Plugins::CamaContactForm::FrontController < CamaleonCms::Apps::PluginsFron
   # here add your custom functions
   def save_form
     flash[:contact_form] = {}
-    @form = current_site.contact_forms.find_by(id: params[:id])
+    # `parent_id: nil` restricts the lookup to authored forms. `contact_forms` also holds every stored
+    # response (a child row, `parent_id` set), and a response's `fields` is empty, so it sails through
+    # validation -- submitting a response's id would write a fresh child row and open it its own throttle
+    # budget, so the flood cap could be lapped by walking the (sequential, guessable) response ids.
+    @form = current_site.contact_forms.find_by(id: params[:id], parent_id: nil)
     fields = params[:fields]
     errors = []
     success = []
