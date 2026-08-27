@@ -14,8 +14,7 @@
 # "cleaned" subset through would silently accept a request no real form produced.
 RSpec.describe 'Security: contact form file field submission shape' do
   let(:form) do
-    build_form(fields: [{ label: 'Docs', field_type: 'file', cid: 'c1', required: 'false', field_options: {} },
-                        { label: 'Name', field_type: 'text', cid: 'c2', required: 'false', field_options: {} }])
+    build_form(fields: [file_field, text_field(cid: 'c2', required: 'false')])
   end
 
   before do
@@ -75,9 +74,7 @@ RSpec.describe 'Security: contact form file field submission shape' do
   end
 
   it 'refuses a single file submitted outside the array encoding' do
-    upload = Rack::Test::UploadedFile.new(Rails.root.join('../support/fixtures/rails.png'), 'image/png')
-
-    expect { submit_contact_form(form, { c1: upload, c2: 'x' }) }.not_to raise_error
+    expect { submit_contact_form(form, { c1: png_uploads.first, c2: 'x' }) }.not_to raise_error
 
     expect_refused_as_invalid_request
   end

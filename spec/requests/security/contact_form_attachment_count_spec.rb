@@ -9,28 +9,15 @@
 # validation -- before any upload, row or mail -- never trimmed to the first N, which would silently
 # drop files the visitor believes they sent.
 RSpec.describe 'Security: contact form attachment count cap' do
-  let(:form) do
-    build_form(fields: [{ label: 'Docs', field_type: 'file', cid: 'c1', required: 'false', field_options: {} }])
-  end
+  let(:form) { build_form(fields: [file_field]) }
 
-  # Every recipient handed to the mailer, captured at the seam `cama_send_email` calls -- the test
-  # queue adapter enqueues `deliver_later` without performing, so `ActionMailer::Base.deliveries`
-  # could prove absence but not that the owner mail was actually attempted (see
-  # contact_form_auto_reply_recipient_spec.rb).
-  let(:sent_to) { [] }
+  # Every recipient handed to the mailer -- proving both absence (nothing sent on refusal) and that
+  # the owner mail was attempted on the boundary.
+  let(:sent_to) { spy_on_mail_recipients }
 
   before do
     form
-    allow(CamaleonCms::HtmlMailer).to receive(:sender) do |recipient, *_|
-      sent_to << recipient
-      instance_double(ActionMailer::MessageDelivery, deliver_later: nil)
-    end
-  end
-
-  def uploads(count)
-    Array.new(count) do
-      Rack::Test::UploadedFile.new(Rails.root.join('../support/fixtures/rails.png'), 'image/png')
-    end
+    sent_to
   end
 
   def stored_files
@@ -41,12 +28,12 @@ RSpec.describe 'Security: contact form attachment count cap' do
     rows = form.responses.count
     files = stored_files.size
 
-    submit_contact_form(form, { c1: uploads(6) })
+    submit_contact_form(form, { c1: png_uploads(6) })
 
     expect(form.responses.count).to eq(rows)
     expect(stored_files.size).to eq(files)
     expect(sent_to).to be_empty
-    expect(flash[:contact_form][:error]).to include('Too many files').and include('5')
+    expect(flash[:contact_form][:error]).to include('maximum 5')
   end
 
   it 'stores a submission at exactly the cap, files and notification mail included' do
@@ -54,7 +41,7 @@ RSpec.describe 'Security: contact form attachment count cap' do
     rows = form.responses.count
     files = stored_files.size
 
-    submit_contact_form(form, { c1: uploads(2) })
+    submit_contact_form(form, { c1: png_uploads(2) })
 
     expect(form.responses.count).to eq(rows + 1)
     expect(stored_files.size).to eq(files + 2)
@@ -66,7 +53,7 @@ RSpec.describe 'Security: contact form attachment count cap' do
   # ActionDispatch::Cookies::CookieOverflow, a 500 in place of the message -- so the stash now
   # drops file values (a file input always redisplays empty anyway).
   it 'refuses a far-over-cap submission with the message, not a session-cookie overflow' do
-    expect { submit_contact_form(form, { c1: uploads(10) }) }.not_to raise_error
+    expect { submit_contact_form(form, { c1: png_uploads(10) }) }.not_to raise_error
 
     expect(flash[:contact_form][:error]).to include('Too many files')
     expect(flash[:values].to_unsafe_h).not_to have_key('c1')
@@ -75,24 +62,21 @@ RSpec.describe 'Security: contact form attachment count cap' do
   it 'honours a lowered contact_form_max_files option' do
     site.set_option('contact_form_max_files', 2)
 
-    expect { submit_contact_form(form, { c1: uploads(3) }) }.not_to(change { form.responses.count })
-    expect(flash[:contact_form][:error]).to include('2')
+    expect { submit_contact_form(form, { c1: png_uploads(3) }) }.not_to(change { form.responses.count })
+    expect(flash[:contact_form][:error]).to include('maximum 2')
   end
 
   # The cap is a per-submission budget, so it sums across file fields -- a per-field cap would
   # multiply by however many file fields the form happens to carry.
   it 'counts the total across every file field of the form' do
     two_field_form = build_form(name: 'Two', slug: 'two',
-                                fields: [
-                                  { label: 'A', field_type: 'file', cid: 'c1', required: 'false', field_options: {} },
-                                  { label: 'B', field_type: 'file', cid: 'c2', required: 'false', field_options: {} }
-                                ])
+                                fields: [file_field(label: 'A'), file_field(cid: 'c2', label: 'B')])
     site.set_option('contact_form_max_files', 2)
 
     expect do
-      submit_contact_form(two_field_form, { c1: uploads(2), c2: uploads(1) })
+      submit_contact_form(two_field_form, { c1: png_uploads(2), c2: png_uploads(1) })
     end.not_to(change { two_field_form.responses.count })
-    expect(flash[:contact_form][:error]).to include('2')
+    expect(flash[:contact_form][:error]).to include('maximum 2')
   end
 
   # The under-cap sibling of the refuse-whole rule: a submission whose file fails its own upload
@@ -102,7 +86,7 @@ RSpec.describe 'Security: contact form attachment count cap' do
     allow_any_instance_of(Plugins::CamaContactForm::FrontController)
       .to receive(:cama_tmp_upload).and_return({ error: 'File size limit exceeded' })
 
-    expect { submit_contact_form(form, { c1: uploads(1) }) }.to change { form.responses.count }.by(1)
+    expect { submit_contact_form(form, { c1: png_uploads(1) }) }.to change { form.responses.count }.by(1)
 
     expect(flash[:contact_form][:notice]).to be_present
     expect(flash[:contact_form][:error]).to include('File size limit exceeded')
@@ -115,12 +99,10 @@ RSpec.describe 'Security: contact form attachment count cap' do
   # %{max} substitution runs on the resolved message).
   describe 'customizing the refusal message' do
     it 'renders the custom message with the limit substituted' do
-      custom = build_form(name: 'Custom', slug: 'custom',
-                          fields: [{ label: 'Docs', field_type: 'file', cid: 'c1', required: 'false',
-                                     field_options: {} }],
+      custom = build_form(name: 'Custom', slug: 'custom', fields: [file_field],
                           settings: { 'railscf_message' => { 'invalid_files_count' => 'At most %{max} files!' } })
 
-      submit_contact_form(custom, { c1: uploads(6) })
+      submit_contact_form(custom, { c1: png_uploads(6) })
 
       expect(flash[:contact_form][:error]).to include('At most 5 files!')
     end
@@ -135,10 +117,8 @@ RSpec.describe 'Security: contact form attachment count cap' do
     end
   end
 
-  # The threshold is a site option, and camaleon_cms stores option values through String#to_var --
-  # the same trap `submission_limit` guards against (contact_form_throttle_limit_option_spec.rb):
-  # only a positive integer is accepted, anything else falls back to the default rather than
-  # 500-ing or refusing every attachment site-wide.
+  # The threshold parser's contract lives in the shared group (spec/support/shared_limit_option.rb);
+  # this wires it to `contact_form_max_files` and its default.
   describe 'the effective limit' do
     let(:controller) { Plugins::CamaContactForm::FrontController.new }
 
@@ -148,31 +128,6 @@ RSpec.describe 'Security: contact form attachment count cap' do
       controller.send(:attachment_limit)
     end
 
-    it 'honours a positive integer option' do
-      site.set_option('contact_form_max_files', 3)
-      expect(effective_limit).to eq(3)
-    end
-
-    it 'falls back to the default when the option is unset' do
-      expect(effective_limit).to eq(5)
-    end
-
-    it 'falls back to the default for 0 or a non-numeric string rather than refusing every file' do
-      site.set_option('contact_form_max_files', 0)
-      expect(effective_limit).to eq(5)
-
-      site.set_option('contact_form_max_files', 'unlimited')
-      expect(effective_limit).to eq(5)
-    end
-
-    # to_var stores only canonical numerals as numbers, so a typed "010" survives as a String --
-    # and bare Integer() would read its leading zero as octal 8, a silently wrong limit.
-    it 'reads a leading-zero string as decimal and rejects a radix prefix' do
-      site.set_option('contact_form_max_files', '010')
-      expect(effective_limit).to eq(10)
-
-      site.set_option('contact_form_max_files', '0x10')
-      expect(effective_limit).to eq(5)
-    end
+    it_behaves_like 'a positive-integer limit option', option: 'contact_form_max_files', default: 5
   end
 end
