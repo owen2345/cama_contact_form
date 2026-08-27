@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Tooling: Ruby 3.4.10 and RubyGems/Bundler 4.0.19
+
+Bumps the development toolchain to Ruby 3.4.10 (`.tool-versions`) and RubyGems/Bundler 4.0.19 across CI and the release workflow (RuboCop 1.90). The gemspec's `required_ruby_version` stays `>= 3.0`, so the packaged gem is unchanged. Development/CI only. [#80](https://github.com/owen2345/cama_contact_form/pull/80).
+
 ### Security: contact-form submissions are rate-limited per IP
 
 The public `save_form` is now capped per client IP per form: past `contact_form_max_submits` stored submissions (default 10) in a fixed 15-minute window, the excess is refused before any mail, upload or row. Only stored submissions count; a real cap needs a shared cache store. Requires `camaleon_cms >= 2.9.4`, checked at boot. Also stops a stored response being resubmitted as a form, and same-second responses colliding. [#77](https://github.com/owen2345/cama_contact_form/pull/77).
