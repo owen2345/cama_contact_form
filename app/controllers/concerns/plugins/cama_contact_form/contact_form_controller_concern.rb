@@ -25,9 +25,9 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
 
   # How many submissions one client IP may make to one form before the excess is refused, and the
   # window that count rolls off over. The threshold is the site-wide `contact_form_max_submits` option
-  # (it tunes every form on the site at once, not one form); the window matches camaleon_cms's login
-  # throttle.
-  SUBMISSION_THROTTLE_WINDOW = 15.minutes
+  # (it tunes every form on the site at once, not one form); the window is camaleon_cms's own login
+  # throttle window, shared as one constant so the two cannot drift.
+  SUBMISSION_THROTTLE_WINDOW = CamaleonCms::CaptchaHelper::CAMA_ATTACK_WINDOW
   SUBMISSION_THROTTLE_DEFAULT_MAX = 10
 
   def perform_save_form(form, fields, success, errors)
@@ -133,11 +133,13 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   # Spend one unit of this IP's per-form budget, called once a row has actually been written so the
   # cap tracks resource-consuming submissions rather than mere attempts.
   #
-  # The counter is an ATOMIC Rails.cache increment (the pattern camaleon_cms's login throttle uses):
-  # `raw: true` keeps the value a bare integer so Redis/Memcached INCR is atomic (a harmless no-op on
-  # Memory/File stores). Older Memory/File stores (Rails < 7.1) return nil for a missing key instead
-  # of seeding it; seed it then, with `unless_exist` so the seed can never overwrite a counter a
-  # concurrent request has already advanced.
+  # The counter is an ATOMIC Rails.cache increment mirroring camaleon_cms's login throttle. Its helper
+  # (cama_captcha_increment_attack) is deliberately not reused: it also mutates session state, which
+  # this IP-only throttle must not do on a public, session-light request (and its unit spec drives a
+  # bare controller with no session). `raw: true` keeps the value a bare integer so Redis/Memcached
+  # INCR is atomic (a harmless no-op on Memory/File stores). Older Memory/File stores (Rails < 7.1)
+  # return nil for a missing key instead of seeding it; seed it then, with `unless_exist` so the seed
+  # can never overwrite a counter a concurrent request has already advanced.
   #
   # The window is FIXED, not sliding: the TTL is anchored when the key is first written and not
   # refreshed on later increments (ActiveSupport preserves the original `expires_at`, and
