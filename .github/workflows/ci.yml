@@ -39,6 +39,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: .tool-versions
+          rubygems: 4.0.19
           bundler-cache: true
 
       # Rails/engine commands must run from the dummy app (this repo is a gem). Load the checked-in
@@ -62,6 +63,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: .tool-versions
+          rubygems: 4.0.19
           bundler-cache: true
 
       # Cache RuboCop's own result cache (keyed on the config + lockfile) so unchanged files are not
