@@ -6,7 +6,7 @@
 # separate requests, and the refusal flash on the redisplayed page — so it is the proof the unit-level
 # lifecycle specs (spec/requests/security/contact_form_submission_throttle_spec.rb) cannot give.
 #
-# Observable only on camaleon_cms >= 2.9.4: on earlier cores the default-on front_cache plugin ran
+# Observable only on camaleon_cms >= 2.9.4: on earlier camaleon_cms releases the default-on front_cache plugin ran
 # `Rails.cache.clear` on every frontend POST, so each submission wiped the counter it had just
 # incremented and no flood could ever reach the limit (the Gemfile floor records this).
 RSpec.describe 'the contact form submission throttle', :js do

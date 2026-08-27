@@ -25,7 +25,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
 
   # How many submissions one client IP may make to one form before the excess is refused, and
   # the window that count rolls off over. The threshold is the `contact_form_max_submits` site option
-  # so an operator can loosen it for a form behind shared NAT; the window matches core's login throttle.
+  # so an operator can loosen it for a form behind shared NAT; the window matches camaleon_cms's login throttle.
   SUBMISSION_THROTTLE_WINDOW = 15.minutes
   SUBMISSION_THROTTLE_DEFAULT_MAX = 10
 
@@ -123,7 +123,7 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   # is written -- the endpoint is public and, unless the form carries a captcha field, otherwise
   # unthrottled.
   #
-  # The counter is an ATOMIC Rails.cache increment (the pattern core's login throttle uses): `raw:
+  # The counter is an ATOMIC Rails.cache increment (the pattern camaleon_cms's login throttle uses): `raw:
   # true` keeps the value a bare integer so Redis/Memcached INCR is atomic (a harmless no-op on
   # Memory/File stores), and the TTL is refreshed on every hit so a sustained flood keeps the window
   # alive. Older Memory/File stores (Rails < 7.1) return nil for a missing key instead of seeding it

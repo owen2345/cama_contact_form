@@ -16,7 +16,7 @@ gemspec
 # gem 'byebug', group: [:development, :test]
 
 gem 'sprockets-rails', '>= 3.5.2'
-# Matches the load-time floor in AdminFormsController: older cores lack the markup detector and
+# Matches the load-time floor in AdminFormsController: camaleon_cms before 2.9.4 lacks the markup detector and
 # wipe the submission-throttle counter on every frontend POST.
 gem 'camaleon_cms', '>= 2.9.4'
 

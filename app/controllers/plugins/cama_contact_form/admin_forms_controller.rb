@@ -7,10 +7,10 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   include Plugins::CamaContactForm::ContactFormControllerConcern
 
   # The markup gate delegates to CamaleonCms::UnsafeMarkup, and the submission throttle counts in
-  # Rails.cache -- which cores before 2.9.4 wiped on every frontend POST (the bundled front_cache
+  # Rails.cache -- which camaleon_cms before 2.9.4 wiped on every frontend POST (the bundled front_cache
   # plugin), leaving the throttle unable to ever trigger. The floor is not expressible as a gemspec
   # dependency -- camaleon_cms depends on this gem, so a reverse pin would be circular -- and older
-  # cores pin `cama_contact_form` wide enough to resolve this release. Fail fast and clearly at
+  # camaleon_cms releases pin `cama_contact_form` wide enough to resolve this release. Fail fast and clearly at
   # load, rather than with a broken gate or an ineffective throttle at the first untrusted request.
   MINIMUM_CORE_VERSION = '2.9.4'
 
@@ -198,7 +198,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
 
   # A well-formed translation marker (`<!--:-->`, `<!--:en-->`). `rendered_forms` strips these to
   # produce the marker-free string the renderer emits, so the gate judges that form too. Reused from
-  # the core detector rather than re-spelled: the markers this strips and the ones
+  # CamaleonCms::UnsafeMarkup's own constant rather than re-spelled: the markers this strips and the ones
   # CamaleonCms::UnsafeMarkup scans around must share one grammar for the gate to stay sound, so they
   # share one constant.
   TRANSLATION_MARKER = CamaleonCms::UnsafeMarkup::TRANSLATION_MARKER
@@ -549,7 +549,7 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
     [string]
   end
 
-  # Each rendered form is judged by CamaleonCms::UnsafeMarkup, the core scan-and-reject detector this
+  # Each rendered form is judged by CamaleonCms::UnsafeMarkup, camaleon_cms's scan-and-reject detector this
   # gate is kept in parity with. It parses once and refuses the value when the safe-list scrubber
   # would remove anything, when a kept attribute smuggles markup (`title="&lt;img ...&gt;"` reaching a
   # `data-html` sink), when dangerous inline CSS survives, or when the value carries one of the

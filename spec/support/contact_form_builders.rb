@@ -29,7 +29,7 @@ module ContactFormBuilders
     { label: 'Name', field_type: 'text', cid: cid, required: 'true', field_options: {} }.merge(overrides)
   end
 
-  # Publishing the fixture post is the harness acting as the site's administrator: core's
+  # Publishing the fixture post is the harness acting as the site's administrator: camaleon_cms's
   # content_shortcodes gate (camaleon_cms >= 2.9.4) fails closed when no acting user is in scope, and
   # `unfiltered_content!` bypasses only the markup gate, not the shortcode gate. Scoped save-and-
   # restore rather than a bare reset, so an example that already arranged Current keeps it.
