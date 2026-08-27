@@ -212,13 +212,15 @@ class Plugins::CamaContactForm::AdminFormsController < CamaleonCms::Apps::Plugin
   MAX_OPTIONS_PER_FIELD = 100
   MAX_GATED_VALUE_BYTES = 64 * 1024
 
-  # The messages the form editor offers, plus `invalid_content`, which the gate itself emits.
+  # The messages the form editor offers, plus the ones the save-time gates themselves emit
+  # (`invalid_content`, `invalid_files_count`) -- a key missing here is not merely un-offered, it is
+  # stripped from every editor save, so a message set any other way would be silently erased.
   #
   # Permitted rather than taken wholesale. `railscf_message` used to go straight from params into the
   # gate, which runs a full Loofah parse per leaf -- so the number of parses was chosen by the caller.
   # Permitting also stops unbounded junk being persisted into `settings.to_json`.
   MESSAGE_KEYS = %w[mail_sent_ok mail_sent_ng validation_error invalid_required invalid_email
-                    captcha_not_match invalid_content].freeze
+                    captcha_not_match invalid_content invalid_files_count].freeze
 
   private
 

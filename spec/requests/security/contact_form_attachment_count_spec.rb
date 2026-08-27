@@ -95,6 +95,33 @@ RSpec.describe 'Security: contact form attachment count cap' do
     expect(flash[:contact_form][:error]).to include('2')
   end
 
+  # The refusal message is author-customizable through the `invalid_files_count` form message, like
+  # the content gate's `invalid_content` -- which takes two halves: the editor's permit must keep
+  # the key (an unlisted key is stripped from every save, erasing the message however it was set),
+  # and the custom text must be able to carry the limit (`the_message` returns it verbatim, so the
+  # %{max} substitution runs on the resolved message).
+  describe 'customizing the refusal message' do
+    it 'renders the custom message with the limit substituted' do
+      custom = build_form(name: 'Custom', slug: 'custom',
+                          fields: [{ label: 'Docs', field_type: 'file', cid: 'c1', required: 'false',
+                                     field_options: {} }],
+                          settings: { 'railscf_message' => { 'invalid_files_count' => 'At most %{max} files!' } })
+
+      submit_contact_form(custom, { c1: uploads(6) })
+
+      expect(flash[:contact_form][:error]).to include('At most 5 files!')
+    end
+
+    it 'is kept by the editor permit rather than stripped on save' do
+      controller = Plugins::CamaContactForm::AdminFormsController.new
+      controller.params = ActionController::Parameters.new(
+        railscf_message: { 'invalid_files_count' => 'custom', 'bogus_key' => 'junk' }
+      )
+
+      expect(controller.send(:permitted_messages).to_h).to eq('invalid_files_count' => 'custom')
+    end
+  end
+
   # The threshold is a site option, and camaleon_cms stores option values through String#to_var --
   # the same trap `submission_limit` guards against (contact_form_throttle_limit_option_spec.rb):
   # only a positive integer is accepted, anything else falls back to the default rather than

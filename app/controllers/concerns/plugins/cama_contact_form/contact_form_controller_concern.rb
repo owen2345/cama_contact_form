@@ -303,12 +303,16 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
     # refused whole, with the other validation errors: trimming to the first N would silently drop
     # files the visitor believes they sent, and the file input is `multiple` with no client-side
     # cap, so a legitimate visitor can hit this and needs the actionable message.
-    if attachment_count(form, fields) > attachment_limit
+    if attachment_count(form, fields) > (max_files = attachment_limit)
+      # The %{max} substitution runs on the resolved message so an author-customized
+      # `invalid_files_count` can carry the limit too -- `the_message` returns a custom message
+      # verbatim, while the i18n default has already interpolated and is left untouched.
       errors << form.the_message('invalid_files_count',
                                  t('.too_many_files_val',
-                                   max: attachment_limit,
+                                   max: max_files,
                                    default: 'Too many files attached (maximum %{max}). ' \
                                             'Please remove some files and try again.'))
+                    .to_s.gsub('%{max}', max_files.to_s)
       validate = false
     end
 
