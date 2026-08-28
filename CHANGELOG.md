@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security: refuse a tracking-pixel `img` in visitor values reaching the raw e-mail (CF-5/6)
+
+The notification e-mail renders each visitor value with `raw`. `<img src=…>` passed the visitor gate but is a tracking beacon there — it fetches an attacker URL when the owner opens the mail — so `img` now joins the loaders the gate already refuses (`iframe`, `object`, `embed`); prose like `Fish & Chips <today>` still passes. The companion CRLF-in-subject concern needs no code: the Mail gem encodes a CRLF subject inert. [#83](https://github.com/owen2345/cama_contact_form/pull/83).
+
 ### Security: pin the upload content scan on the public contact-form endpoint (CF-4)
 
 The anonymous `save_form` upload is guarded from storing an active file in the CMS origin by camaleon_cms's content scanner, not by a formats allowlist, and the plugin already floors `camaleon_cms >= 2.9.4` at boot so the scanner is present. No code change; adds a regression spec pinning that a script `.html`, handler `.svg`, and executable `.js` are refused with nothing written, and a clean `.svg` stored byte-for-byte. [#82](https://github.com/owen2345/cama_contact_form/pull/82).
