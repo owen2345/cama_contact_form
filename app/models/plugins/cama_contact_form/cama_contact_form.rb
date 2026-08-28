@@ -95,18 +95,28 @@ class Plugins::CamaContactForm::CamaContactForm < ActiveRecord::Base
     self.settings = {}.to_json if settings.blank?
   end
 
+  # Deletes the files this response uploaded, on destroy. Those files live directly in the site's
+  # `public/contact_form/<site_id>` directory, and this is confined to delete only from there: each
+  # stored path is reduced to its basename and rebuilt inside that root, so a path that is absolute,
+  # climbs out with `../`, or is otherwise hostile -- as an untrusted import can leave in a
+  # response's settings -- can at most name a file already sitting in the root, never one outside
+  # it. Missing parent, non-hash settings and non-string entries are tolerated rather than raising
+  # on a destroy any `:manage, :plugins` holder can trigger.
   def delete_uploaded_files
     return if parent_id.nil?
 
-    form = self.class.find_by id: parent_id
+    form = self.class.find_by(id: parent_id)
     response_data = the_settings[:fields]
-    file_cids = form.fields
-                    .select { |f| f[:field_type] == 'file' }
-                    .map { |f| f[:cid].to_sym }
+    return if form.nil? || !response_data.is_a?(Hash)
 
-    file_cids
-      .flat_map { |cid| response_data[cid] }
-      .map { |file| file.sub Rails.application.routes.url_helpers.cama_root_url, Rails.public_path.to_s }
-      .each { |file| FileUtils.rm_f file }
+    media_root = Rails.public_path.join('contact_form', site_id.to_s).to_s
+    form.fields
+        .select { |f| f[:field_type] == 'file' }
+        .flat_map { |f| response_data[f[:cid].to_sym] }
+        .compact
+        .each do |file|
+          target = File.expand_path(File.basename(file.to_s), media_root)
+          FileUtils.rm_f(target) if File.dirname(target) == media_root
+        end
   end
 end
