@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-### Security: pin the upload content scan on the public contact-form endpoint (CF-4)
+### Security: refuse a tracking-pixel `img` in visitor values reaching the raw e-mail
+
+The notification e-mail renders each visitor value with `raw`. `<img src=…>` passed the visitor gate but is a tracking beacon there — it fetches an attacker URL when the owner opens the mail — so `img` now joins the loaders the gate already refuses (`iframe`, `object`, `embed`); prose like `Fish & Chips <today>` still passes. The companion CRLF-in-subject concern needs no code: the Mail gem encodes a CRLF subject inert. [#83](https://github.com/owen2345/cama_contact_form/pull/83).
+
+### Security: pin the upload content scan on the public contact-form endpoint
 
 The anonymous `save_form` upload is guarded from storing an active file in the CMS origin by camaleon_cms's content scanner, not by a formats allowlist, and the plugin already floors `camaleon_cms >= 2.9.4` at boot so the scanner is present. No code change; adds a regression spec pinning that a script `.html`, handler `.svg`, and executable `.js` are refused with nothing written, and a clean `.svg` stored byte-for-byte. [#82](https://github.com/owen2345/cama_contact_form/pull/82).
 
@@ -20,7 +24,7 @@ The public `save_form` is now capped per client IP per form: past `contact_form_
 
 ## 0.1.13
 
-### Security: the contact-form auto-reply validates its recipient (CF-1)
+### Security: the contact-form auto-reply validates its recipient
 
 The optional confirmation e-mail went to whatever address the visitor typed into the field named by the `to_answer` setting — an unauthenticated, fully attacker-controlled recipient — which turned the site into an email cannon firing from its own From address. The recipient is now stripped of surrounding whitespace and must be a single well-formed address (`URI::MailTo::EMAIL_REGEXP`), so one submission can neither header-inject a Bcc nor fan out to a recipient list; a refused auto-reply is logged. Email-type fields are validated with the same rule at submission time, so a malformed address is a visible error rather than a confirmation that silently never arrives. The owner notification is unaffected. [#76](https://github.com/owen2345/cama_contact_form/pull/76).
 
@@ -42,7 +46,7 @@ Adds RuboCop (same plugin set and config as camaleon_cms) and brings the code up
 
 ### Testing: the plugin now has its own RSpec suite
 
-Adds a camaleon_cms-backed dummy Rails app under `spec/` so the plugin can be tested in its own repo. Floors the `camaleon_cms` dev dependency at `>= 2.9.3` (a core with the upload scanner and save-time gate), closing audit finding CF-8. Development/CI only. [#71](https://github.com/owen2345/cama_contact_form/pull/71).
+Adds a camaleon_cms-backed dummy Rails app under `spec/` so the plugin can be tested in its own repo. Floors the `camaleon_cms` dev dependency at `>= 2.9.3` (a core with the upload scanner and save-time gate). Development/CI only. [#71](https://github.com/owen2345/cama_contact_form/pull/71).
 
 ### Security: the `forms` shortcode is gated by camaleon-cms
 

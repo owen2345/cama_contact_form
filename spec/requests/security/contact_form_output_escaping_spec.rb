@@ -54,6 +54,28 @@ RSpec.describe 'Security: contact form output escaping' do
       expect(form.responses.count).to eq(0)
     end
 
+    # `<img>` carries no handler and no script URL, so the narrow gate used to let it through -- but
+    # the e-mail renders it raw, and `<img src="http://attacker/">` is a tracking beacon that
+    # fetches an attacker URL the moment the owner opens the mail (leaking that they opened it, and
+    # their IP). It now joins the external-resource loaders the gate already refuses (`iframe`,
+    # `object`, `embed`).
+    it 'refuses a bare tracking-pixel img in a value the e-mail body interpolates' do
+      form = build_form(fields: [text_field], settings: {
+                          'railscf_mail' => { 'to' => 'owner@example.com', 'subject' => 's',
+                                              'body' => 'New message: [c1]' }
+                        })
+      publish_form_on_sample_post
+
+      # Unquoted src on purpose: with double quotes the value is already refused by the redisplay
+      # quote rule, which would green this test without the element rule doing anything. Unquoted,
+      # the img element is the only thing that can refuse it.
+      expect do
+        submit_contact_form(form, { c1: '<img src=http://tracker.example/p.gif>' })
+      end.not_to(change { ActionMailer::Base.deliveries.count })
+
+      expect(form.responses.count).to eq(0)
+    end
+
     # The rule is narrow on purpose. Running a sanitizer here would refuse ordinary prose, and being
     # told "your message contains characters that are not allowed" for writing `<today>` is both
     # wrong and infuriating.
@@ -70,6 +92,38 @@ RSpec.describe 'Security: contact form output escaping' do
 
       # Stored exactly as written, which is what `[c1]` then splices into the mail body.
       expect(stored_answer(form, :c1)).to eq('Fish & Chips <today> please')
+    end
+  end
+
+  # A visitor value spliced by `cama_replace_codes` into the author's subject template reaches the
+  # Subject header. The value is never stripped of CR/LF -- that would be a transform, and the
+  # model rejects rather than rewrites -- so the plugin passes it through verbatim and the Mail gem
+  # neutralizes it: a CRLF in a header value is encoded, not honoured as a new header. The owner `to`
+  # is author-configured and the auto-reply recipient is validated elsewhere, so the subject is the
+  # only place a visitor value reaches a header.
+  describe 'a CRLF-bearing visitor value that reaches the subject header' do
+    it 'is passed through unstripped, and cannot inject a mail header' do
+      captured = []
+      allow(CamaleonCms::HtmlMailer).to receive(:sender) do |_to, subject, *_|
+        captured << subject
+        instance_double(ActionMailer::MessageDelivery, deliver_later: nil)
+      end
+      form = build_form(fields: [text_field(cid: 'c1', label: 'Name')], settings: {
+                          'railscf_mail' => { 'to' => 'owner@example.com', 'subject' => 'Contact from [c1]',
+                                              'body' => 'b' }
+                        })
+      publish_form_on_sample_post
+
+      submit_contact_form(form, { c1: "Bob\r\nBcc: evil@example.com" })
+
+      subject = captured.first
+      # No transform: the CRLF the visitor sent is still there when we hand the subject to the mailer.
+      expect(subject).to eq("Contact from Bob\r\nBcc: evil@example.com")
+      # And that subject, as a real mail header, injects nothing -- the CRLF is encoded inert.
+      mail = Mail.new(to: 'owner@example.com', from: 'site@example.com', subject: subject)
+      expect(mail.bcc).to be_nil
+      expect(mail['Bcc']).to be_nil
+      expect(mail.encoded).not_to include("\r\nBcc:")
     end
   end
 

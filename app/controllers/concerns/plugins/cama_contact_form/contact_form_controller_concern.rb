@@ -14,8 +14,13 @@ module Plugins::CamaContactForm::ContactFormControllerConcern
   # Field types whose submitted value is a list of chosen option labels, joined for the mail summary.
   MULTI_VALUE_FIELD_TYPES = %w[radio checkboxes].freeze
 
-  # Elements that do something rather than say something, wherever they appear.
-  ACTIVE_ELEMENTS = %w[script style iframe object embed applet frame frameset form input button
+  # Elements that do something rather than say something, wherever they appear. `img` sits with the
+  # other external-resource loaders (`iframe`, `object`, `embed`): the notification e-mail renders a
+  # visitor's value with `raw`, so `<img src="http://attacker/">` there is a tracking beacon that
+  # fetches an attacker URL -- leaking that the owner opened the mail, and their IP -- the moment
+  # they open it, which no contact message legitimately needs. Ordinary prose with angle brackets
+  # (`Fish & Chips <today>`) is an unknown tag, not one of these, so it still passes.
+  ACTIVE_ELEMENTS = %w[script style iframe object embed img applet frame frameset form input button
                        link meta base svg math template].freeze
   ACTIVE_ELEMENT = %r{<\s*/?\s*(?:#{ACTIVE_ELEMENTS.join('|')})\b}i
   EVENT_HANDLER_IN_TAG = /<[a-zA-Z][^>]*\son[a-zA-Z]+\s*=/im
