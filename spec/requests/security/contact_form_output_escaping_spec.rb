@@ -95,8 +95,8 @@ RSpec.describe 'Security: contact form output escaping' do
     end
   end
 
-  # CF-6: a visitor value spliced by `cama_replace_codes` into the author's subject template reaches
-  # the Subject header. The value is never stripped of CR/LF -- that would be a transform, and the
+  # A visitor value spliced by `cama_replace_codes` into the author's subject template reaches the
+  # Subject header. The value is never stripped of CR/LF -- that would be a transform, and the
   # model rejects rather than rewrites -- so the plugin passes it through verbatim and the Mail gem
   # neutralizes it: a CRLF in a header value is encoded, not honoured as a new header. The owner `to`
   # is author-configured and the auto-reply recipient is validated elsewhere, so the subject is the
