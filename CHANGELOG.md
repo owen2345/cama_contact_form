@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security: pin the upload content scan on the public contact-form endpoint (CF-4)
+
+The anonymous `save_form` upload is guarded from storing an active file in the CMS origin by camaleon_cms's content scanner, not by a formats allowlist, and the plugin already floors `camaleon_cms >= 2.9.4` at boot so the scanner is present. No code change; adds a regression spec pinning that a script `.html`, handler `.svg`, and executable `.js` are refused with nothing written, and a clean `.svg` stored byte-for-byte. [#82](https://github.com/owen2345/cama_contact_form/pull/82).
+
 ### Security: submissions cap their attachment count, and forged file values are refused
 
 One public POST could attach unbounded many files, all persisted under `public/contact_form` and mailed. A submission is now refused whole past `contact_form_max_files` total files (default 5), before any upload, row or mail; the message is customizable as `invalid_files_count`. Forged file-field values are refused instead of 500-ing, a failed upload is reported alongside the success message, and the editor refuses duplicate `cid`s. [#81](https://github.com/owen2345/cama_contact_form/pull/81).
