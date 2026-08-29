@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.14
+
 ### Security: confine a response's file cleanup to the site media root
 
 Deleting a stored response runs a `before_destroy` that removed its uploaded files with no path confinement — so a response carrying an absolute or `../`-climbing path (which an untrusted site import can seed, then a `:manage, :plugins` holder deletes) deleted an arbitrary file. Cleanup is now confined to the site's own `public/contact_form` directory via `File.basename`, and tolerates malformed settings instead of raising. [#84](https://github.com/owen2345/cama_contact_form/pull/84).
