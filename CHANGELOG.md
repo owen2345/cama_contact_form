@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.15
+
 ### Fix: plugin config parses under json 3
 
 `config/camaleon_plugin.json` carried a `//` comment, which the json gem no longer accepts by default as of 3.0, so a host app resolving json 3.x raised `JSON::ParserError` at boot. The file is now plain JSON. [#86](https://github.com/owen2345/cama_contact_form/pull/86).
