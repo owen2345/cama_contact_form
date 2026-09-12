@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Tooling: RuboCop runs with its default formatter in CI
+
+The CI RuboCop step runs without `-f github`, so the job log lists the offenses and the summary. Development tooling only. [#89](https://github.com/owen2345/cama_contact_form/pull/89).
+
 ## 0.1.15
 
 ### Fix: plugin config parses under json 3
