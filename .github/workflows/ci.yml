@@ -77,6 +77,6 @@ jobs:
             rubocop-${{ runner.os }}-
 
       - name: Lint code for consistent style
-        run: bin/rubocop -f github
+        run: bin/rubocop
         env:
           RUBOCOP_CACHE_ROOT: tmp/rubocop
