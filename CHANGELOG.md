@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Tooling: the suite can run against an unreleased camaleon_cms
+
+A callable **Core compatibility** workflow runs the suite against a given camaleon_cms commit; core calls it from its own pipeline, so a core change that breaks the plugin shows on the core pull request. Setting `CAMALEON_CMS_PATH` makes the Gemfile source the core from a local checkout; unset, nothing changes. Development tooling only. [#90](https://github.com/owen2345/cama_contact_form/pull/90).
+
 ### Tooling: RuboCop runs with its default formatter in CI
 
 The CI RuboCop step runs without `-f github`, so the job log lists the offenses and the summary. Development tooling only. [#89](https://github.com/owen2345/cama_contact_form/pull/89).
