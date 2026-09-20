@@ -1,30 +1,20 @@
 # Core compatibility: runs this plugin's suite against an unreleased camaleon_cms commit instead of
 # the released gem the committed Gemfile.lock pins. camaleon_cms calls it from its own pipeline
 # (.github/workflows/ecosystem.yml there) with the commit under test, so a core change that breaks
-# this plugin shows up as a check on the core pull request. It can also be started by hand, from the
-# Actions tab, to try the plugin against any core branch, tag or commit.
+# this plugin shows up as a check on the core pull request.
 #
 # A called workflow runs in the CALLER's context: `github.repository`, `github.sha` and a bare
 # `actions/checkout` all mean camaleon_cms there, not this repository. Both checkouts below therefore
 # name their repository and ref explicitly, side by side under the workspace.
+#
+# Deliberately no `workflow_dispatch`: a manual run executes in this repository's default-branch
+# context, where code checked out from a free-form ref could write the Actions caches every later run
+# restores. A pull request run has no such reach, so to try a camaleon_cms branch by hand, open a
+# draft pull request there.
 name: Core compatibility
 
 on:
   workflow_call:
-    inputs:
-      camaleon_cms_repository:
-        description: 'owner/name of the camaleon_cms repository to test against'
-        type: string
-        default: owen2345/camaleon-cms
-      camaleon_cms_ref:
-        description: 'camaleon_cms commit, branch or tag to test against'
-        type: string
-        default: master
-      member_ref:
-        description: 'cama_contact_form commit, branch or tag to test'
-        type: string
-        default: master
-  workflow_dispatch:
     inputs:
       camaleon_cms_repository:
         description: 'owner/name of the camaleon_cms repository to test against'
