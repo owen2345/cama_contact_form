@@ -18,7 +18,17 @@ gemspec
 gem 'sprockets-rails', '>= 3.5.2'
 # Floor enforced at boot by CamaContactForm::CoreCompatibility: 2.9.4 is where front_cache stopped
 # wiping Rails.cache (and the throttle counter) on every frontend POST.
-gem 'camaleon_cms', '>= 2.9.4'
+#
+# CAMALEON_CMS_PATH sources the core from a local checkout instead, which is how the Core
+# compatibility workflow (.github/workflows/core_compat.yml) runs this suite against an unreleased
+# core commit. The committed Gemfile.lock belongs to the released gem: after a local run with the
+# variable set, restore it with `git checkout Gemfile.lock`.
+camaleon_cms_path = ENV.fetch('CAMALEON_CMS_PATH', '')
+if camaleon_cms_path.empty?
+  gem 'camaleon_cms', '>= 2.9.4'
+else
+  gem 'camaleon_cms', path: camaleon_cms_path
+end
 
 # Development/test dependencies (none are shipped in the packaged gem). A camaleon_cms-backed dummy
 # Rails app under spec/ is booted under RSpec.

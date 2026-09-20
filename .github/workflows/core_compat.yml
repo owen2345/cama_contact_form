@@ -1,0 +1,121 @@
+# Core compatibility: runs this plugin's suite against an unreleased camaleon_cms commit instead of
+# the released gem the committed Gemfile.lock pins. camaleon_cms calls it from its own pipeline
+# (.github/workflows/ecosystem.yml there) with the commit under test, so a core change that breaks
+# this plugin shows up as a check on the core pull request. It can also be started by hand, from the
+# Actions tab, to try the plugin against any core branch, tag or commit.
+#
+# A called workflow runs in the CALLER's context: `github.repository`, `github.sha` and a bare
+# `actions/checkout` all mean camaleon_cms there, not this repository. Both checkouts below therefore
+# name their repository and ref explicitly, side by side under the workspace.
+name: Core compatibility
+
+on:
+  workflow_call:
+    inputs:
+      camaleon_cms_repository:
+        description: 'owner/name of the camaleon_cms repository to test against'
+        type: string
+        default: owen2345/camaleon-cms
+      camaleon_cms_ref:
+        description: 'camaleon_cms commit, branch or tag to test against'
+        type: string
+        default: master
+      member_ref:
+        description: 'cama_contact_form commit, branch or tag to test'
+        type: string
+        default: master
+  workflow_dispatch:
+    inputs:
+      camaleon_cms_repository:
+        description: 'owner/name of the camaleon_cms repository to test against'
+        type: string
+        default: owen2345/camaleon-cms
+      camaleon_cms_ref:
+        description: 'camaleon_cms commit, branch or tag to test against'
+        type: string
+        default: master
+      member_ref:
+        description: 'cama_contact_form commit, branch or tag to test'
+        type: string
+        default: master
+
+permissions:
+  contents: read
+
+jobs:
+  rspec:
+    name: RSpec
+    runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+      # The Gemfile sources camaleon_cms from this path when it is set. Bundler resolves it relative
+      # to the Gemfile, so it points at the sibling checkout below.
+      CAMALEON_CMS_PATH: ../camaleon_cms
+    defaults:
+      run:
+        working-directory: member
+
+    steps:
+      - name: Check out cama_contact_form
+        uses: actions/checkout@v7
+        with:
+          repository: owen2345/cama_contact_form
+          ref: ${{ inputs.member_ref }}
+          path: member
+          persist-credentials: false
+
+      - name: Check out camaleon_cms
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.camaleon_cms_repository }}
+          ref: ${{ inputs.camaleon_cms_ref }}
+          path: camaleon_cms
+          persist-credentials: false
+
+      # The :js admin feature specs drive headless Chrome, as in ci.yml.
+      - name: Set up Chromedriver
+        uses: nanasess/setup-chromedriver@v3
+
+      # No `bundler-cache: true` here, unlike ci.yml: with a lockfile present it installs in
+      # deployment mode, which refuses a Gemfile that no longer matches the committed lock, and the
+      # path-sourced camaleon_cms is exactly that.
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .tool-versions
+          rubygems: 4.0.19
+          working-directory: member
+
+      # `bundle lock` starts from the committed lock and unlocks only what changed: camaleon_cms, now
+      # path-sourced, and whatever its gemspec at this commit newly requires. Every other gem stays
+      # at the version this plugin is known to work with, so a failure points at the core rather than
+      # at dependency drift. The diff is printed so a gem that did move is visible in the log.
+      - name: Re-resolve the bundle against the core under test
+        run: |
+          git -C ../camaleon_cms log -1 --format='camaleon_cms under test: %H %s'
+          git log -1 --format='cama_contact_form under test: %H %s'
+          bundle config set --local path vendor/bundle
+          bundle lock
+          git --no-pager diff -- Gemfile.lock
+
+      - name: Cache the bundle
+        uses: actions/cache@v4
+        with:
+          path: member/vendor/bundle
+          key: core-compat-cama_contact_form-${{ runner.os }}-${{ hashFiles('member/.tool-versions', 'member/Gemfile.lock') }}
+          restore-keys: |
+            core-compat-cama_contact_form-${{ runner.os }}-
+
+      - name: Install the bundle
+        run: bundle install --jobs 4
+
+      # The checked-in schema was built from a released core. Loading it marks every migration up to
+      # its version as applied; db:migrate then applies any the core under test adds beyond it (the
+      # engine appends its migrations to the dummy app's paths), and is a no-op otherwise.
+      - name: Prepare the test database
+        run: |
+          bundle exec rails db:test:prepare
+          bundle exec rails db:migrate
+        working-directory: member/spec/dummy
+
+      - name: Run the test suite
+        run: bundle exec rspec
