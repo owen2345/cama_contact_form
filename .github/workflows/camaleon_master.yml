@@ -1,0 +1,84 @@
+# Runs on: a pull request or a `master` push of this repository.
+# Tests:   the commit of this plugin, against the `master` branch of camaleon_cms.
+# Check:   `Camaleon master / Suite / RSpec`.
+#
+# ci.yml tests against the released gem that Gemfile.lock pins. This workflow tests against the
+# code that the next Camaleon release ships. The steps of the suite are in core_compat.yml, which
+# this workflow calls.
+#
+# The check is advisory. It is a workflow of its own, because the Release workflow reads only the
+# result of ci.yml: a red check here blocks no merge and no release. A red check means that this
+# commit fails against Camaleon `master`. The cause is this commit or a Camaleon change. The
+# `cama_contact_form / RSpec` checks on the camaleon_cms commits show which.
+#
+# The first job skips the suite when Camaleon `master` has no commit after the release that
+# Gemfile.lock pins, because ci.yml tests that same code then. After a new Camaleon release, the
+# suite thus runs until Gemfile.lock pins that release.
+#
+# A pull request from a fork runs the same jobs. The token can only read, the workflow uses no
+# secret, and the run can write only the caches of its own pull request.
+name: Camaleon master
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: camaleon-master-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unreleased:
+    name: Is master ahead of the release?
+    # core_compat.yml takes this plugin from owen2345/cama_contact_form. A commit that only a fork
+    # holds is not there, so a run inside a fork is skipped. A pull request from a fork to this
+    # repository runs here, and is not skipped.
+    if: github.repository == 'owen2345/cama_contact_form'
+    runs-on: ubuntu-latest
+    outputs:
+      ahead_by: ${{ steps.compare.outputs.ahead_by }}
+
+    steps:
+      # Only Gemfile.lock of the commit under test.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: Gemfile.lock
+          sparse-checkout-cone-mode: false
+
+      # The tag of a Camaleon release is its version, on a `master` commit. `ahead_by` thus counts
+      # the `master` commits that the pinned release does not hold. The output is `unknown` when
+      # the version is not readable or the request fails, and the suite runs: only a known 0
+      # skips it.
+      - name: Count the Camaleon commits after the release that Gemfile.lock pins
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CAMALEON: owen2345/camaleon-cms
+        run: |
+          ahead_by=unknown
+          version=$(sed -n 's/^    camaleon_cms (\([0-9][0-9A-Za-z.]*\))$/\1/p' Gemfile.lock | head -n 1)
+          if [ -n "$version" ]; then
+            ahead_by=$(gh api "repos/$CAMALEON/compare/$version...master" --jq '.ahead_by') || true
+          fi
+          # A failed request prints its error, which is not a count.
+          case "$ahead_by" in '' | *[!0-9]*) ahead_by=unknown ;; esac
+          echo "camaleon_cms master: $ahead_by commits after release ${version:-unknown}"
+          echo "ahead_by=$ahead_by" >> "$GITHUB_OUTPUT"
+
+  # The check shows as `Camaleon master / Suite / RSpec`. `github.sha` is the commit that ci.yml
+  # tests too: the merge commit of a pull request, the pushed commit on `master`. The two RSpec
+  # checks of a commit thus differ only in the Camaleon code. core_compat.yml is read from that
+  # commit.
+  rspec:
+    name: Suite
+    needs: unreleased
+    if: needs.unreleased.outputs.ahead_by != '0'
+    uses: ./.github/workflows/core_compat.yml
+    with:
+      camaleon_cms_ref: master
+      member_ref: ${{ github.sha }}

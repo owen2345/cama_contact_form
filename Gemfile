@@ -19,8 +19,8 @@ gem 'sprockets-rails', '>= 3.5.2'
 # Floor enforced at boot by CamaContactForm::CoreCompatibility: 2.9.4 is where front_cache stopped
 # wiping Rails.cache (and the throttle counter) on every frontend POST.
 #
-# CAMALEON_CMS_PATH sources the core from a local checkout instead, which is how the Core
-# compatibility workflow (.github/workflows/core_compat.yml) runs this suite against an unreleased
+# CAMALEON_CMS_PATH sources the core from a local checkout instead, which is how the reusable
+# workflow (.github/workflows/core_compat.yml) runs this suite against an unreleased
 # core commit. The committed Gemfile.lock belongs to the released gem: after a local run with the
 # variable set, restore it with `git checkout Gemfile.lock`.
 camaleon_cms_path = ENV.fetch('CAMALEON_CMS_PATH', '')

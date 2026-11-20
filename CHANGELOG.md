@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Tooling: CI runs the suite against Camaleon master
+
+An advisory check runs the suite against the `master` branch of camaleon_cms, on each pull request and each push to `master`. The RSpec check of CI shows the camaleon_cms version that it tests. Development tooling only. [#95](https://github.com/owen2345/cama_contact_form/pull/95).
+
 ### Tooling: the suite can run against an unreleased camaleon_cms
 
 A callable **Core compatibility** workflow runs the suite against a given camaleon_cms commit; core calls it from its own pipeline, so a core change that breaks the plugin shows on the core pull request. Setting `CAMALEON_CMS_PATH` makes the Gemfile source the core from a local checkout; unset, nothing changes. Development tooling only. [#90](https://github.com/owen2345/cama_contact_form/pull/90).
