@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security: the lock has no gem with an open advisory
+
+`Gemfile.lock` moves to Rails 8.1.4.1, sqlite3 2.10.2 and puma 8.1.2. Development tooling only. [#97](https://github.com/owen2345/cama_contact_form/pull/97).
+
 ### Fix: the gem declares `rails >= 6.1`
 
 The gemspec declared `rails` with no version, and `Gemfile.lock` resolved to Rails 0.9.5. The gemspec now has the Rails floor of camaleon_cms, and the lock pins Rails 8.1 again. [#96](https://github.com/owen2345/cama_contact_form/pull/96).
