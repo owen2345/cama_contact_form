@@ -17,8 +17,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Reads the camaleon_cms version that Gemfile.lock pins. The name of the RSpec check shows it.
+  locked:
+    name: camaleon_cms version of Gemfile.lock
+    runs-on: ubuntu-latest
+    outputs:
+      camaleon_cms: ${{ steps.read.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: Gemfile.lock
+          sparse-checkout-cone-mode: false
+
+      - name: Read the version
+        id: read
+        run: |
+          version=$(sed -n 's/^    camaleon_cms (\([0-9][0-9A-Za-z.]*\))$/\1/p' Gemfile.lock | head -n 1)
+          echo "version=${version:-unknown}" >> "$GITHUB_OUTPUT"
+
   rspec:
-    name: RSpec
+    name: RSpec (camaleon_cms ${{ needs.locked.outputs.camaleon_cms }})
+    needs: locked
     runs-on: ubuntu-latest
     env:
       RAILS_ENV: test
