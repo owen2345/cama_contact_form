@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fix: the gem declares `rails >= 6.1`
+
+The gemspec declared `rails` with no version, and `Gemfile.lock` resolved to Rails 0.9.5. The gemspec now has the Rails floor of camaleon_cms, and the lock pins Rails 8.1 again. [#96](https://github.com/owen2345/cama_contact_form/pull/96).
+
 ### Tooling: CI runs the suite against Camaleon master
 
 An advisory check runs the suite against the `master` branch of camaleon_cms, on each pull request and each push to `master`. The RSpec check of CI shows the camaleon_cms version that it tests. Development tooling only. [#95](https://github.com/owen2345/cama_contact_form/pull/95).
