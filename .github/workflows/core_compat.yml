@@ -1,17 +1,28 @@
-# Core compatibility: runs this plugin's suite against an unreleased camaleon_cms commit instead of
-# the released gem the committed Gemfile.lock pins. camaleon_cms calls it from its own pipeline
-# (.github/workflows/ecosystem.yml there) with the commit under test, so a core change that breaks
-# this plugin shows up as a check on the core pull request.
+# Reusable suite against a Camaleon commit: runs this plugin's suite against a camaleon_cms commit
+# that is not released, instead of the released gem that Gemfile.lock pins.
+#
+# This workflow never starts alone. Two workflows call it:
+#
+# - ecosystem.yml of camaleon_cms, on a pull request or a `master` push of camaleon_cms.
+#   Tests: the `master` branch of this plugin, against the camaleon_cms commit of that event.
+#   Check: `cama_contact_form / RSpec`, on the camaleon_cms commit. A camaleon_cms change that breaks
+#   this plugin thus shows on the camaleon_cms pull request.
+# - camaleon_master.yml of this repository, on a pull request or a `master` push of this repository.
+#   Tests: the commit of this plugin, against the `master` branch of camaleon_cms.
+#   Check: `Camaleon master / Suite / RSpec`, on the commit of this plugin.
 #
 # A called workflow runs in the CALLER's context: `github.repository`, `github.sha` and a bare
-# `actions/checkout` all mean camaleon_cms there, not this repository. Both checkouts below therefore
-# name their repository and ref explicitly, side by side under the workspace.
+# `actions/checkout` all mean the caller there. The caller is camaleon_cms, or this repository when
+# camaleon_master.yml calls. Both checkouts below therefore name their repository and ref
+# explicitly, side by side under the workspace.
 #
 # Deliberately no `workflow_dispatch`: a manual run executes in this repository's default-branch
 # context, where code checked out from a free-form ref could write the Actions caches every later run
 # restores. A pull request run has no such reach, so to try a camaleon_cms branch by hand, open a
-# draft pull request there.
-name: Core compatibility
+# draft pull request there. A camaleon_master.yml run on a push to `master` does write those caches.
+# The code that it runs is the pushed `master` commit and camaleon_cms `master`, never a free-form
+# ref.
+name: Reusable suite against a Camaleon commit
 
 on:
   workflow_call:

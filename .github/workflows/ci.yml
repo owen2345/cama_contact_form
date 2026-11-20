@@ -1,3 +1,10 @@
+# Runs on: a pull request or a `master` push of this repository.
+# Tests:   the commit of this plugin, against the released camaleon_cms gem that Gemfile.lock pins.
+# Checks:  `CI / RSpec (camaleon_cms <version>)` and `CI / RuboCop`.
+#
+# The checks against Camaleon code that is not released are in camaleon_master.yml and
+# core_compat.yml.
+#
 # CI for the plugin's own suite: RSpec (against a camaleon_cms-backed dummy Rails app, see spec/) and
 # RuboCop. Gemfile.lock is committed, so `bundler-cache: true` restores the exact, known gem set from
 # cache instead of resolving and installing every run; the pinned camaleon_cms (floored at >= 2.9.4 in
