@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security: the development Ruby moves to 3.4.13
+
+Ruby 3.4.12 and earlier has CVE-2026-132825. `.tool-versions` now pins 3.4.13. Development tooling only. [#98](https://github.com/owen2345/cama_contact_form/pull/98).
+
 ### Security: the lock has no gem with an open advisory
 
 `Gemfile.lock` moves to Rails 8.1.4.1, sqlite3 2.10.2 and puma 8.1.2. Development tooling only. [#97](https://github.com/owen2345/cama_contact_form/pull/97).
