@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Tooling: the browser specs pass on Chrome 158
+
+Chrome 158 refuses the call that Capybara 3.40.0 sends to clear the cookies after each example. The specs now clear the cookies and the local storage in a different way. Development tooling only. [#99](https://github.com/owen2345/cama_contact_form/pull/99).
+
 ### Security: the development Ruby moves to 3.4.13
 
 Ruby 3.4.12 and earlier has CVE-2026-132825. `.tool-versions` now pins 3.4.13. Development tooling only. [#98](https://github.com/owen2345/cama_contact_form/pull/98).
